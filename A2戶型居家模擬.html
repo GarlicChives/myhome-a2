@@ -796,6 +796,10 @@ function redrawFurniture2d() {
     el('rect', { x: -f.w / 2, y: -f.d / 2, width: f.w, height: f.d, rx: isPerson(f) ? 12 : 2,
                  fill: f.color, 'fill-opacity': 0.55, 'stroke-width': isSel(f.id) ? 2 : 1.5,
                  'class': 'furn-rect' + (isSel(f.id) ? ' sel' : '') + (bad ? ' colliding' : '') }, g);
+    if (isPerson(f)) {   // 俯視：肩膀＋頭圓
+      el('circle', { cx: 0, cy: 0, r: Math.max(6, Math.min(11, f.d / 2 - 2)), fill: 'rgba(255,255,255,.3)',
+                     'class': 'furn-rect', 'stroke-width': 1 }, g);
+    }
     var fs = Math.max(10, Math.min(24, Math.min(f.w, f.d) * 0.28));
     var t = el('text', { x: 0, y: 0, 'class': 'furn-txt', 'font-size': fs, 'stroke-width': fs / 7,
                          'text-anchor': 'middle', 'dominant-baseline': 'middle' }, g);
@@ -1534,21 +1538,32 @@ function rebuildBoxes() {
     b.style.transform = 'translate3d(' + (f.x - W / 2) + 'px,' + (f.y - H / 2) + 'px,0) rotateZ(' + f.rot + 'deg)';
     var w = f.w, d = f.d, h = f.h, z0 = f.z;
     var topCls = (isSel(f.id) ? 'sel' : '') + (bad ? ' bad' : '');
-    function addBox(bw, bd, bh, bz, cls) {
+    function addBox(bw, bd, bh, bz, cls, cx) {
+      cx = cx || 0;
       var faces = [
-        faceDiv(bw, bd, 'translate3d(' + (-bw / 2) + 'px,' + (-bd / 2) + 'px,' + (bz + bh) + 'px)', 1, cls),
-        faceDiv(bw, bd, 'translate3d(' + (-bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px)', 0.5, ''),
-        faceDiv(bw, bh, 'translate3d(' + (-bw / 2) + 'px,' + (bd / 2) + 'px,' + bz + 'px) rotateX(90deg)', 0.82, ''),
-        faceDiv(bw, bh, 'translate3d(' + (-bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateX(90deg)', 0.78, ''),
-        faceDiv(bd, bh, 'translate3d(' + (bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.66, ''),
-        faceDiv(bd, bh, 'translate3d(' + (-bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.62, '')
+        faceDiv(bw, bd, 'translate3d(' + (cx - bw / 2) + 'px,' + (-bd / 2) + 'px,' + (bz + bh) + 'px)', 1, cls),
+        faceDiv(bw, bd, 'translate3d(' + (cx - bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px)', 0.5, ''),
+        faceDiv(bw, bh, 'translate3d(' + (cx - bw / 2) + 'px,' + (bd / 2) + 'px,' + bz + 'px) rotateX(90deg)', 0.82, ''),
+        faceDiv(bw, bh, 'translate3d(' + (cx - bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateX(90deg)', 0.78, ''),
+        faceDiv(bd, bh, 'translate3d(' + (cx + bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.66, ''),
+        faceDiv(bd, bh, 'translate3d(' + (cx - bw / 2) + 'px,' + (-bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.62, '')
       ];
       faces.forEach(function (fc) { fc.style.background = bad ? '#d32f2f' : f.color; b.appendChild(fc); });
     }
-    if (isPerson(f)) {   // 人物：身體＋頭部兩個方塊
-      var headH = Math.min(26, h * 0.16), headW = Math.min(20, Math.min(w, d));
-      addBox(w, d, h - headH, z0, '');
-      addBox(headW, headW, headH, z0 + h - headH, topCls);
+    if (isPerson(f)) {   // 人形：頭、軀幹、雙手、雙腳（人體比例：腿47%、軀幹39%、頭14%）
+      var headH = Math.round(h * 0.14), legH = Math.round(h * 0.47);
+      var torsoH = h - headH - legH;
+      var armW = Math.max(7, Math.round(w * 0.18));
+      var torsoW = w - 2 * armW;
+      var legW = Math.max(6, Math.round(torsoW / 2) - 2);
+      var armLen = Math.round(h * 0.38);
+      var headW = Math.min(22, torsoW);
+      addBox(legW, d * 0.8, legH, z0, '', -(legW / 2 + 2));                                        // 左腿
+      addBox(legW, d * 0.8, legH, z0, '', (legW / 2 + 2));                                         // 右腿
+      addBox(torsoW, d, torsoH, z0 + legH, '');                                                    // 軀幹
+      addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', -(torsoW / 2 + armW / 2));    // 左臂
+      addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', (torsoW / 2 + armW / 2));     // 右臂
+      addBox(headW, Math.min(22, d), headH, z0 + legH + torsoH, topCls);                           // 頭
     } else {
       addBox(w, d, h, z0, topCls);
     }
@@ -2126,7 +2141,11 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
             pfm.kind === 'person' && pfm.h === 154 && pfm.weight === 48 && pfm.color === '#f48fb1' && pfm.z === 0;
   pm.z = 120; settleGravity();
   pOk = pOk && pm.z === 0;
-  ck('男/女主人預設+不可離地', pOk, '(171cm/75kg、154cm/48kg)');
+  setMode(true);
+  var pmBox = boxHost.querySelector('[data-bid="' + pm.id + '"]');
+  pOk = pOk && pmBox && pmBox.children.length === 36;   // 人形＝頭+軀幹+雙手+雙腳 6 部件×6 面
+  setMode(false);
+  ck('男/女主人預設+不可離地+人形', pOk, '(171cm/75kg、154cm/48kg、部件面=' + (pmBox ? pmBox.children.length : 0) + ')');
   // 31. 人不可堆疊、不可被覆蓋（人拖向家具、家具拖向人皆被阻擋）
   var fAp = byId(fA.id);
   dragStart = { x: pm.x, y: pm.y, z: 0, rot: 0, valid: true };
