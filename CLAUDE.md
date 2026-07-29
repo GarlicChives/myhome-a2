@@ -11,14 +11,14 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 36 項）。
+**新功能必須同步新增對應斷言**（selftest 目前 37 項）。
 
 ## 標準工作流程（每次需求都照做）
 
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **36 項全 PASS**；有新功能先補斷言再回到步驟 3。
+4. headless Chrome 跑 `?selftest=1` → **37 項全 PASS**；有新功能先補斷言再回到步驟 3。
 5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit && git push`（部署見「互動設計」末節）。
@@ -62,6 +62,8 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   改高度時堆疊上方物件隨頂面位移、整疊頂不可超過 CEIL（setHeight/pileAbove）。
 - 流理台（廚具）外框＝障礙物（walls 內 x354.53~414.53/y1010~1170 四段，由 add_counter_obstacle.py 加入）；
   洗手槽內框為純圖面、嚴禁進 WALLS。家具面板預設開啟。
+- 門口（DOORS）＝牆面共線群組 40~160cm 缺口自動推導（玄關大門 y1225/x130~230、主臥門、
+  兩衛浴門、臥室中門）；懸停/拖曳家具時顯示「距門口 N」（OBB↔門段精確距離，4m 內、隨懸停清除）。
 - 人物（kind='person'）：👨男主人 藍#2f6fd6 171cm/75kg、👩女主人 粉#f48fb1 154cm/48kg。
   可拖曳；永遠 z=0（不可離地）；不進磁吸/疊放；與任何物件/牆互為硬阻擋（dragBlocked）。
   3D 以身體＋頭部兩方塊呈現；清單與邊緣標籤顯示 身高/體重。
@@ -96,6 +98,7 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 - 溝通用繁體中文；重視精確與可驗證性，交付要附驗證證據（PASS 清單＋截圖）
 - 檔案需可上雲分享（單一自包含 HTML、無外部資源）
 - 手繪習慣從玄關起算；列印要 100% 實際大小
+
 
 
 

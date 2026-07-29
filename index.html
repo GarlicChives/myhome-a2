@@ -325,6 +325,7 @@ svg.insertBefore(gridLayer, mainG);
 var dimLayer  = el('g', { id: 'dimLayer' }, svg);
 var edimLayer = el('g', { id: 'edimLayer' }, svg);
 var guideLayer = el('g', { id: 'guideLayer', 'pointer-events': 'none' }, svg);
+var doorLayer = el('g', { id: 'doorLayer', 'pointer-events': 'none' }, svg);
 var furnLayer = el('g', { id: 'furnLayer' }, svg);
 var measLayer = el('g', { id: 'measLayer' }, svg);
 var snapLayer = el('g', { id: 'snapLayer', 'pointer-events': 'none' }, svg);
@@ -407,6 +408,34 @@ drawDimSet(PLAN.extDims, edimLayer, 'edim', 22);
 
 /* ============ walls / collision ============ */
 var WALLS = PLAN.walls;   // [x1,y1,x2,y2]
+// 門口＝牆面共線群組中 40~160cm 的缺口（玄關大門/房門/衛浴門；由 CAD 牆線推導）
+var DOORS = (function () {
+  var v = {}, hz = {};
+  WALLS.forEach(function (w_) {
+    if (Math.abs(w_[0] - w_[2]) < 0.01) {
+      var k = w_[0].toFixed(2);
+      (v[k] = v[k] || []).push([Math.min(w_[1], w_[3]), Math.max(w_[1], w_[3])]);
+    } else if (Math.abs(w_[1] - w_[3]) < 0.01) {
+      var k2 = w_[1].toFixed(2);
+      (hz[k2] = hz[k2] || []).push([Math.min(w_[0], w_[2]), Math.max(w_[0], w_[2])]);
+    }
+  });
+  var out = [];
+  function scan(groups, vertical) {
+    for (var k in groups) {
+      var segs = groups[k].sort(function (a, b) { return a[0] - b[0]; });
+      var c = parseFloat(k);
+      for (var i = 0; i + 1 < segs.length; i++) {
+        var g = segs[i + 1][0] - segs[i][1];
+        if (g >= 40 && g <= 160) {
+          out.push(vertical ? [c, segs[i][1], c, segs[i + 1][0]] : [segs[i][1], c, segs[i + 1][0], c]);
+        }
+      }
+    }
+  }
+  scan(v, true); scan(hz, false);
+  return out;
+})();
 function obbCorners(f) {
   var a = f.rot * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
   var hw = f.w / 2, hd = f.d / 2;
@@ -612,8 +641,57 @@ function updateGuides(p, fobj) {
     else e.tx.removeAttribute('transform');
     e.tx.textContent = label;
   }
+  updateDoorDist(fobj);   // 懸停/拖曳家具時：顯示與最近門口的距離
+}
+function ptSegNear(px_, py_, ax, ay, bx, by) {
+  var vx = bx - ax, vy = by - ay;
+  var L2 = vx * vx + vy * vy || 1;
+  var t = Math.max(0, Math.min(1, ((px_ - ax) * vx + (py_ - ay) * vy) / L2));
+  var qx = ax + vx * t, qy = ay + vy * t;
+  return { d: Math.hypot(px_ - qx, py_ - qy), qx: qx, qy: qy };
+}
+// 兩線段最近點對（不相交時最近距離必出現在端點對邊的投影）
+function segSegNear(a1, a2, b1, b2) {
+  if (segInt(a1, a2, b1, b2)) return { d: 0, p: a1, q: a1 };
+  var best = null;
+  function cand(d, p, q) { if (!best || d < best.d) best = { d: d, p: p, q: q }; }
+  var r;
+  r = ptSegNear(a1[0], a1[1], b1[0], b1[1], b2[0], b2[1]); cand(r.d, a1, [r.qx, r.qy]);
+  r = ptSegNear(a2[0], a2[1], b1[0], b1[1], b2[0], b2[1]); cand(r.d, a2, [r.qx, r.qy]);
+  r = ptSegNear(b1[0], b1[1], a1[0], a1[1], a2[0], a2[1]); cand(r.d, [r.qx, r.qy], b1);
+  r = ptSegNear(b2[0], b2[1], a1[0], a1[1], a2[0], a2[1]); cand(r.d, [r.qx, r.qy], b2);
+  return best;
+}
+// 物件（OBB 邊界）到最近門口開口的精確距離＋標註
+function updateDoorDist(f) {
+  doorLayer.innerHTML = '';
+  if (!f) return;
+  var cs = obbCorners(f);
+  var best = null;
+  DOORS.forEach(function (dr) {
+    var b1 = [dr[0], dr[1]], b2 = [dr[2], dr[3]];
+    for (var i = 0; i < 4; i++) {
+      var r = segSegNear(cs[i], cs[(i + 1) % 4], b1, b2);
+      if (!best || r.d < best.d) { best = r; best.seg = dr; }
+    }
+  });
+  if (!best || best.d > 400) return;   // 4m 內才提示
+  var fs = gpx(mode3d ? 15 : 13);
+  el('line', { x1: best.seg[0], y1: best.seg[1], x2: best.seg[2], y2: best.seg[3],
+               'class': 'guide-line', 'stroke-width': 3.2, 'stroke-dasharray': '2 3' }, doorLayer);
+  el('line', { x1: best.p[0], y1: best.p[1], x2: best.q[0], y2: best.q[1],
+               'class': 'guide-line', 'stroke-width': 1.6 }, doorLayer);
+  [best.p, best.q].forEach(function (pt) {
+    el('circle', { cx: pt[0], cy: pt[1], r: gpx(3), fill: '#21c08b', stroke: 'none' }, doorLayer);
+  });
+  var mx = (best.p[0] + best.q[0]) / 2, my = (best.p[1] + best.q[1]) / 2 - gpx(8);
+  var tx = el('text', { x: mx, y: my, 'class': 'guide-txt', 'font-size': fs, 'stroke-width': fs / 7,
+                        'text-anchor': 'middle' }, doorLayer);
+  if (mode3d) tx.setAttribute('transform', 'rotate(' + (-cam.rz) + ' ' + mx + ' ' + my + ')');
+  tx.textContent = '距門口 ' + (Math.round(best.d * 10) / 10);
 }
 function hideGuides() {
+  doorLayer.innerHTML = '';
   if (!guideEls) return;
   guideEls.forEach(function (e) { e.ln.setAttribute('display', 'none'); e.tx.setAttribute('display', 'none'); });
 }
@@ -2182,6 +2260,20 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   delFurniture(kb.id);
   ck('磁吸/阻擋在流理台外框', kL !== null && !sinkInWalls && kSnap && kBlock,
      '(外框x=' + (kL ? kL.toFixed(2) : '無') + ', 洗手槽入牆=' + sinkInWalls + ', 貼齊=' + kSnap + ', 阻擋=' + kBlock + ')');
+  // 33. 懸停物件顯示與最近門口距離（玄關大門 y=1225 x130~230；60×60 @(180,1100) 底緣→門=95）
+  var entrOk = DOORS.some(function (dr) {
+    return Math.abs(dr[1] - 1225) < 0.01 && Math.abs(dr[3] - 1225) < 0.01 &&
+           Math.abs(dr[0] - 130) < 0.1 && Math.abs(dr[2] - 230) < 0.1;
+  });
+  var dbox = addFurniture({ name: '門距測試', w: 60, d: 60, h: 40, x: 180, y: 1100, rot: 0, color: '#888' });
+  updateGuides({ x: dbox.x, y: dbox.y }, dbox);   // 懸停該物件（同現有規則）
+  var dt = doorLayer.querySelector('text');
+  var doorOk = entrOk && dt && dt.textContent === '距門口 95';
+  hideGuides();
+  var doorCleared = doorLayer.children.length === 0;
+  delFurniture(dbox.id);
+  ck('懸停顯示與門口距離', doorOk && doorCleared,
+     '(門口數=' + DOORS.length + ', ' + (dt ? dt.textContent : '無標註') + ', 移開清除=' + doorCleared + ')');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
