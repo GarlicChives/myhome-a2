@@ -11,14 +11,14 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 33 項）。
+**新功能必須同步新增對應斷言**（selftest 目前 35 項）。
 
 ## 標準工作流程（每次需求都照做）
 
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **33 項全 PASS**；有新功能先補斷言再回到步驟 3。
+4. headless Chrome 跑 `?selftest=1` → **35 項全 PASS**；有新功能先補斷言再回到步驟 3。
 5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit && git push`（部署見「互動設計」末節）。
@@ -59,6 +59,9 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 - 版本管理「💾 版本」：localStorage 多版本另存/還原/刪除（上限 30）；配置隨時自動儲存（重開機續編）。
 - 高度上限＝天花板：新增即截斷；選取後右側輸入即時所見即所得套用（liveApply），
   改高度時堆疊上方物件隨頂面位移、整疊頂不可超過 CEIL（setHeight/pileAbove）。
+- 人物（kind='person'）：👨男主人 藍#2f6fd6 171cm/75kg、👩女主人 粉#f48fb1 154cm/48kg。
+  可拖曳；永遠 z=0（不可離地）；不進磁吸/疊放；與任何物件/牆互為硬阻擋（dragBlocked）。
+  3D 以身體＋頭部兩方塊呈現；清單與邊緣標籤顯示 身高/體重。
 - 部署：GitHub Pages **https://garlicchives.github.io/myhome-a2/**（repo：GarlicChives/myhome-a2，
   `index.html` 與主檔同內容、build_app.py 一併輸出）。gh CLI：`C:\Program Files\GitHub CLI\gh.exe`
   （帳號 GarlicChives＝使用者個人帳號）；git 需 `http.sslBackend=schannel`（公司網路 SSL 檢查）＋
@@ -90,4 +93,5 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 - 溝通用繁體中文；重視精確與可驗證性，交付要附驗證證據（PASS 清單＋截圖）
 - 檔案需可上雲分享（單一自包含 HTML、無外部資源）
 - 手繪習慣從玄關起算；列印要 100% 實際大小
+
 
