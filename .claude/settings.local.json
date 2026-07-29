@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($f = Get-Item \"D:\\\\Desktop\\\\MyHome\\\\A2戶型.dwg\"; \"$\\($f.Length\\) bytes\"; $bytes = [System.IO.File]::ReadAllBytes\\($f.FullName\\)[0..10]; [System.Text.Encoding]::ASCII.GetString\\($bytes\\))"
+    ]
+  }
+}
