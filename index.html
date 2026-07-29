@@ -484,6 +484,32 @@ function aabbOf(f) {
   var ey = Math.abs(Math.sin(a)) * f.w / 2 + Math.abs(Math.cos(a)) * f.d / 2;
   return { x0: f.x - ex, x1: f.x + ex, y0: f.y - ey, y1: f.y + ey, ex: ex, ey: ey };
 }
+// 遞迴取得疊在 f 上方（直接或間接靠 f 支撐）的物件
+function pileAbove(f) {
+  var out = [], seen = {}; seen[f.id] = true;
+  var queue = [f];
+  while (queue.length) {
+    var b = queue.shift();
+    furniture.forEach(function (o) {
+      if (seen[o.id]) return;
+      if (obbOverlap(o, b) && Math.abs(o.z - (b.z + b.h)) < 0.3) { seen[o.id] = true; out.push(o); queue.push(o); }
+    });
+  }
+  return out;
+}
+// 調整 f 的高度（堆疊時整疊頂不可超過天花板；上方物件隨頂面位移）。回傳是否被限制
+function setHeight(f, nh) {
+  var above = pileAbove(f);
+  var aboveH = 0;
+  above.forEach(function (o) { aboveH = Math.max(aboveH, o.z + o.h - (f.z + f.h)); });
+  var maxH = CEIL - f.z - aboveH;
+  var clamped = false;
+  if (nh > maxH) { nh = Math.max(1, Math.round(maxH * 10) / 10); clamped = true; }
+  var dTop = nh - f.h;
+  f.h = nh;
+  if (Math.abs(dTop) > 0.001) above.forEach(function (o) { o.z += dTop; });
+  return clamped;
+}
 // 禁止懸空：支點只能是地板或其他家具頂面。由低到高逐件落到最高支撐面
 function settleGravity() {
   furniture.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (f) {
@@ -676,6 +702,10 @@ function addFurniture(o) {
     x: o.x != null ? o.x : vb.x + vb.w / 2, y: o.y != null ? o.y : vb.y + vb.h / 2,
     rot: o.rot || 0, color: o.color || curColor
   };
+  if (f.z + f.h > CEIL) {   // 新增高度不可超過天花板
+    f.h = Math.max(1, CEIL - f.z);
+    showHint('高度已限制為天花板上限（' + CEIL + ' cm）');
+  }
   furniture.push(f);
   if (isInvalid(f)) {
     if (findFreeSpot(f)) showHint('已放到附近的空位');
@@ -845,9 +875,9 @@ function syncPanel() {
   $('panelTitle').textContent = f
     ? '編輯：' + f.name + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
     : '新增家具／家電';
-  if (f) {
-    $('fName').value = f.name; $('fW').value = f.w; $('fD').value = f.d;
-    $('fH').value = f.h; $('fZ').value = f.z; $('fR').value = f.rot;
+  if (f) {   // 使用者正在輸入的欄位不回寫（避免游標被打斷）
+    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot };
+    for (var k in m) { var elk = $(k); if (document.activeElement !== elk) elk.value = m[k]; }
   }
 }
 function renderList() {
@@ -880,13 +910,23 @@ $('btnAdd').addEventListener('click', function () {
   o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2;
   addFurniture(o);
 });
-$('btnUpdate').addEventListener('click', function () {
+// 所見即所得：選取狀態下右側輸入即時套用（高度受天花板/整疊高度限制）
+function liveApply() {
   var f = getSel(); if (!f) return;
   var o = readForm();
-  f.name = o.name; f.w = o.w; f.d = o.d; f.h = o.h; f.z = o.z; f.rot = o.rot;
-  if (isInvalid(f)) showHint('目前尺寸/位置與牆或家具重疊（紅框），請調整');
-  refreshAll();
+  f.name = o.name; f.w = o.w; f.d = o.d; f.rot = o.rot;
+  f.z = o.z;
+  var clamped = setHeight(f, o.h);
+  refreshAll();   // 內含 settleGravity：離地值會自動落回支撐面
+  if (clamped) {
+    $('fH').value = f.h;
+    showHint('高度已限制：整疊不可超過天花板 ' + CEIL + ' cm（此件上限 ' + f.h + '）');
+  } else if (isInvalid(f)) showHint('目前尺寸/位置與牆或家具重疊（紅框），請調整');
+}
+['fName', 'fW', 'fD', 'fH', 'fZ', 'fR'].forEach(function (id) {
+  $(id).addEventListener('input', function () { if (getSel()) liveApply(); });
 });
+$('btnUpdate').addEventListener('click', liveApply);
 $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
   addFurniture({ name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot, color: f.color });
@@ -1899,6 +1939,23 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var verOk = furniture.length === vc0 && loadVers()[0] && loadVers()[0].name === '自測版本';
   var vsClean = loadVers(); vsClean.shift(); saveVers(vsClean);
   ck('版本儲存/還原', verOk, '(' + vc0 + ' 件)');
+  // 25. 新增高度超過天花板 → 自動截斷為 CEIL
+  var tall1 = addFurniture({ name: '超高測試', w: 50, d: 50, h: 400, x: 480, y: 950, rot: 0, color: '#555' });
+  var addClampOk = tall1.h === CEIL && tall1.z === 0;
+  delFurniture(tall1.id);
+  ck('新增高度截斷至天花板', addClampOk, '(h=400→' + CEIL + ')');
+  // 26. 選取後即時改高度：堆疊時整疊不可超過天花板（茶几40+花瓶40，茶几上限=280-40=240）
+  //（版本還原後物件已是複本，需以 id 重新取得）
+  var fAr = byId(fA.id), f2r = byId(f2.id);
+  setSel(fAr.id); syncPanel();
+  $('fH').value = 300;
+  $('fH').dispatchEvent(new Event('input'));
+  var liveOk = fAr.h === 240 && Math.abs(f2r.z - 240) < 0.01 && Math.abs(f2r.z + f2r.h - CEIL) < 0.01;
+  $('fH').value = 40;
+  $('fH').dispatchEvent(new Event('input'));
+  liveOk = liveOk && fAr.h === 40 && Math.abs(f2r.z - 40) < 0.01;
+  setSel(null);
+  ck('即時改高度受整疊天花板限制', liveOk, '(300→240，還原40)');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
