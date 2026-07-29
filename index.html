@@ -1051,14 +1051,24 @@ function magnetClamp(f, o) {
   f.x = Math.round(f.x * 100) / 100;
   f.y = Math.round(f.y * 100) / 100;
 }
-var stackCtx = { key: '', idx: 0, count: 0, lifts: [], lastHint: '', mode: 'free' };
+// 疊放中拖出邊緣的磁鐵抵抗：沿退出軸把重疊量拉回 hold（仍在上方，可突破）
+function holdClamp(f, o, hold) {
+  var fb = aabbOf(f), ob = aabbOf(o);
+  var ox = Math.min(fb.x1, ob.x1) - Math.max(fb.x0, ob.x0);
+  var oy = Math.min(fb.y1, ob.y1) - Math.max(fb.y0, ob.y0);
+  if (ox < hold) f.x += (f.x < o.x ? 1 : -1) * (hold - ox);
+  if (oy < hold) f.y += (f.y < o.y ? 1 : -1) * (hold - oy);
+  f.x = Math.round(f.x * 100) / 100;
+  f.y = Math.round(f.y * 100) / 100;
+}
+var stackCtx = { key: '', idx: 0, count: 0, lifts: [], lastHint: '', mode: 'free', memb: {} };
 var lastGood = null;
 // 載運：拖曳時跟著移動的物件（上方堆疊遞迴 + 多選群組成員及其堆疊）
 var dragCarry = [];   // {o, ox, oy, oz（相對被拖物）, sx, sy, sz（拖曳前原位）}
 function inCarry(id) { return dragCarry.some(function (c) { return c.o.id === id; }); }
 function beginCarry(f) {
   dragCarry = [];
-  stackCtx.mode = 'free'; stackCtx.lastHint = '';
+  stackCtx.mode = 'free'; stackCtx.lastHint = ''; stackCtx.memb = {};
   var seen = {}; seen[f.id] = true;
   function mk(o) { return { o: o, ox: o.x - f.x, oy: o.y - f.y, oz: o.z - f.z, sx: o.x, sy: o.y, sz: o.z }; }
   function addStackAbove(base) {
@@ -1121,18 +1131,17 @@ function dragTo(f, nx, ny) {
     if (p > bestPen) { bestPen = p; best = o; }
   });
   var ENTER = Math.min(15, Math.min(fb.ex, fb.ey));   // 推入多深「突破磁鐵」開始疊放
-  var EXIT = Math.max(2, ENTER * 0.4);                // 回拖淺於此即退回磁吸貼邊
+  var HOLD = 2;   // 疊放中拖出邊緣：磁鐵抵抗保留的最小重疊（可突破）
   var mode = stackCtx.mode;
-  if (!best) mode = 'free';
-  else if (mode === 'stack') {
-    if (bestPen <= -6) mode = 'free';
-    else if (bestPen <= EXIT) mode = 'mag';
+  if (mode === 'stack') {
+    if (bestPen <= -6) { mode = 'free'; stackCtx.memb = {}; }   // 完全拖出+6cm 才脫離（落地）
   } else if (mode === 'mag') {
     if (bestPen >= ENTER) mode = 'stack';
-    else if (bestPen <= -6) mode = 'free';
+    else if (bestPen <= -6 || !best) mode = 'free';
   } else {
-    if (bestPen >= ENTER) mode = 'stack';
-    else if (bestPen >= -2.5) mode = 'mag';
+    if (best && bestPen >= ENTER) mode = 'stack';
+    else if (best && bestPen >= -2.5) mode = 'mag';
+    else mode = 'free';
   }
   stackCtx.mode = mode;
   if (mode !== 'stack') {
@@ -1144,13 +1153,32 @@ function dragTo(f, nx, ny) {
       stackCtx.lastHint = '';
     }
     f.z = 0;   // 未疊放即落地（禁止懸空）
-    stackCtx.key = ''; stackCtx.count = 0;
+    stackCtx.key = ''; stackCtx.count = 0; stackCtx.memb = {};
     applyCarry(f);
     return;
   }
-  var ov = footprintOverlaps(f);
+  // 疊放中拖出下層範圍：邊緣磁鐵抵抗（仍在上方、保留 HOLD 重疊，繼續拉即突破）
+  if (best && bestPen < HOLD) {
+    holdClamp(f, best, HOLD);
+    if (collidesWalls(f) && lastGood) { f.x = lastGood.x; f.y = lastGood.y; }
+    if (stackCtx.lastHint !== 'hold') {
+      stackCtx.lastHint = 'hold';
+      showHint('已達下層物件邊緣（磁鐵抵抗）：繼續往外拉即脫離掉落');
+    }
+  }
+  // 疊放對象成員資格（遲滯：加入需重疊 ≥0.01、退出需離開 ≥2.5cm → 嚴禁邊界閃爍）
+  if (!stackCtx.memb) stackCtx.memb = {};
+  var memb = stackCtx.memb, fb2 = aabbOf(f);
+  furniture.forEach(function (o) {
+    if (o.id === f.id || inCarry(o.id)) return;
+    var p = penDepth(fb2, aabbOf(o));
+    if (memb[o.id]) { if (p <= -2.5) delete memb[o.id]; }
+    else if (p >= 0.01 && obbOverlap(f, o)) memb[o.id] = true;
+  });
+  var ov = furniture.filter(function (o) { return o.id !== f.id && !inCarry(o.id) && memb[o.id]; })
+    .sort(function (a, b) { return (a.z - b.z) || ((a.z + a.h) - (b.z + b.h)) || (a.id - b.id); });
   if (!ov.length) {   // AABB 穿入但實際（OBB）未重疊（旋轉物件邊角）：視為磁吸
-    stackCtx.mode = 'mag';
+    stackCtx.mode = 'mag'; stackCtx.memb = {};
     f.z = 0;
     stackCtx.key = ''; stackCtx.count = 0;
     applyCarry(f);
@@ -1193,7 +1221,7 @@ stage.addEventListener('wheel', function (e) {
   zoomAt(e.clientX, e.clientY, e.deltaY > 0 ? 1.18 : 1 / 1.18);
 }, { passive: false });
 stage.addEventListener('pointerdown', function (e) {
-  stage.setPointerCapture(e.pointerId);
+  try { stage.setPointerCapture(e.pointerId); } catch (err) {}   // 合成事件無真實 pointer 時忽略
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   moved = false;
   hideGuides();
@@ -1310,7 +1338,7 @@ function settleMoved(f) {
     if (stackCtx.key && f.z > 0) showHint('已疊放（離地 ' + f.z + ' cm）');
     stackCtx.lifts = [];   // 保留抬升結果 = 定案
   }
-  stackCtx.key = ''; stackCtx.count = 0; stackCtx.lastHint = ''; stackCtx.mode = 'free';
+  stackCtx.key = ''; stackCtx.count = 0; stackCtx.lastHint = ''; stackCtx.mode = 'free'; stackCtx.memb = {};
   dragCarry = [];
   lastGood = null;
   dragStart = null;
@@ -1332,7 +1360,7 @@ function endPtr(e) {
 stage.addEventListener('pointerup', endPtr);
 stage.addEventListener('pointercancel', function (e) {
   pointers.delete(e.pointerId);
-  if (dragF || rotF) { clearLifts(); dragCarry = []; dragStart = null; lastGood = null; stackCtx.key = ''; stackCtx.mode = 'free'; }
+  if (dragF || rotF) { clearLifts(); dragCarry = []; dragStart = null; lastGood = null; stackCtx.key = ''; stackCtx.mode = 'free'; stackCtx.memb = {}; }
   dragF = null; rotF = null; stage.classList.remove('dragging');
 });
 stage.addEventListener('pointerleave', function () { if (pointers.size === 0) { hideGuides(); showSnap(null); } });
@@ -1542,7 +1570,7 @@ scene3d.addEventListener('wheel', function (e) {
   applyCam();
 }, { passive: false });
 scene3d.addEventListener('pointerdown', function (e) {
-  scene3d.setPointerCapture(e.pointerId);
+  try { scene3d.setPointerCapture(e.pointerId); } catch (err) {}   // 合成事件無真實 pointer 時忽略
   p3.set(e.pointerId, { x: e.clientX, y: e.clientY });
   moved3 = false;
   if (p3.size === 2) {
@@ -1629,7 +1657,7 @@ function endPtr3(e) {
 scene3d.addEventListener('pointerup', endPtr3);
 scene3d.addEventListener('pointercancel', function (e) {
   p3.delete(e.pointerId);
-  if (drag3F) { clearLifts(); dragCarry = []; dragStart = null; lastGood = null; stackCtx.key = ''; stackCtx.mode = 'free'; }
+  if (drag3F) { clearLifts(); dragCarry = []; dragStart = null; lastGood = null; stackCtx.key = ''; stackCtx.mode = 'free'; stackCtx.memb = {}; }
   drag3F = null; scene3d.classList.remove('dragging');
 });
 scene3d.addEventListener('pointerleave', function () { if (p3.size === 0) hideGuides(); });
@@ -1886,14 +1914,16 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   magOk = magOk && Math.abs(m1.x - 255) < 0.01 && stackCtx.mode === 'mag';
   dragTo(m1, 300, 700);                       // 推入 >15cm 突破磁鐵 → 疊上（fA40+花瓶40=80）
   var stkOk = m1.z === 80 && Math.abs(m1.x - 300) < 0.01 && stackCtx.mode === 'stack';
-  dragTo(m1, 253, 700);                       // 回拖 → 退回磁吸貼邊、落地
-  var backOk = Math.abs(m1.x - 255) < 0.01 && m1.z === 0 && stackCtx.mode === 'mag';
-  dragTo(m1, 200, 700);                       // 拉遠 >6cm → 完全脫離
-  var freeOk = Math.abs(m1.x - 200) < 0.01 && stackCtx.mode === 'free';
+  dragTo(m1, 253, 700);                       // 拖出茶几邊緣 → 邊緣磁鐵抵抗：保留2cm重疊仍在上方（花瓶已退出→z=40）
+  var backOk = Math.abs(m1.x - 257) < 0.01 && m1.z === 40 && stackCtx.mode === 'stack';
+  dragTo(m1, 253, 700);                       // 同位置重複需穩定
+  backOk = backOk && Math.abs(m1.x - 257) < 0.01 && m1.z === 40;
+  dragTo(m1, 200, 700);                       // 突破（完全拖出+6cm）→ 脫離落地
+  var freeOk = Math.abs(m1.x - 200) < 0.01 && m1.z === 0 && stackCtx.mode === 'free';
   settleMoved(m1);
   delFurniture(m1.id);
-  ck('磁吸⇄疊放遲滯不閃爍', magOk && stkOk && backOk && freeOk,
-     '(mag=' + magOk + ' stack=' + stkOk + ' back=' + backOk + ' free=' + freeOk + ')');
+  ck('磁吸⇄疊放⇄拖出遲滯', magOk && stkOk && backOk && freeOk,
+     '(mag=' + magOk + ' stack=' + stkOk + ' hold=' + backOk + ' free=' + freeOk + ')');
   // 19. 貼牆不被擋：x=415 面線在 y=877.5 有段落接點，物件貼齊且邊跨過接點仍不算碰撞
   var flushBox = { id: 9101, x: 385, y: 880, w: 60, d: 60, h: 50, z: 0, rot: 0 };
   ck('貼牆面不被接點擋住', collidesWalls(flushBox) === false &&
@@ -1956,6 +1986,87 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   liveOk = liveOk && fAr.h === 40 && Math.abs(f2r.z - 40) < 0.01;
   setSel(null);
   ck('即時改高度受整疊天花板限制', liveOk, '(300→240，還原40)');
+  // 27. 疊放邊界遲滯：跨過花瓶邊緣來回擺動不閃爍（加入0.01/退出-2.5）
+  var fA3 = byId(fA.id), f2c = byId(f2.id);
+  var m2 = addFurniture({ name: '邊界測試', w: 60, d: 60, h: 20, x: 200, y: 700, rot: 0, color: '#777' });
+  dragStart = { x: m2.x, y: m2.y, z: 0, rot: 0, valid: true };
+  lastGood = { x: m2.x, y: m2.y };
+  beginCarry(m2);
+  dragTo(m2, 310, 700);   // 蓋到茶几+花瓶 → z=80
+  var fl1 = m2.z === 80;
+  dragTo(m2, 283, 700);   // 花瓶 pen=-2（遲滯窗內）→ 仍 z=80
+  var fl2 = m2.z === 80;
+  dragTo(m2, 280, 700);   // pen=-5 → 花瓶退出 → z=40
+  var fl3 = m2.z === 40;
+  dragTo(m2, 283, 700);   // 回到 -2：未達加入門檻 → 仍 z=40（不得閃回 80）
+  var fl4 = m2.z === 40;
+  settleMoved(m2);
+  delFurniture(m2.id);
+  ck('疊放邊界遲滯不閃爍', fl1 && fl2 && fl3 && fl4,
+     '(80/' + (fl2 ? 80 : 'X') + '/40/' + (fl4 ? 40 : 'X') + ')');
+  // 28. 真實指標事件拖曳模擬（2D）：down→逐步 move→up，z 變化須階段單調、擺動段零變化
+  function planToClient(px_, py_) {
+    var r = stage.getBoundingClientRect(), s = scale2d();
+    var ox2 = (r.width - vb.w * s) / 2, oy2 = (r.height - vb.h * s) / 2;
+    return { x: r.left + ox2 + (px_ - vb.x) * s, y: r.top + oy2 + (py_ - vb.y) * s };
+  }
+  function pev(el, type, x, y) {
+    el.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, isPrimary: true, buttons: 1 }));
+  }
+  var simF = addFurniture({ name: '模擬', w: 60, d: 60, h: 20, x: 200, y: 700, rot: 0, color: '#777' });
+  redrawFurniture2d();
+  var gSim = furnLayer.querySelector('[data-fid="' + simF.id + '"]');
+  var c0 = planToClient(simF.x, simF.y);
+  pev(gSim, 'pointerdown', c0.x, c0.y);
+  var lastZ = simF.z, seg1 = [], seg2 = 0, seg3 = [], xx, cc;
+  for (xx = 200; xx <= 330; xx += 2) {   // 推進：0→40→80 單調
+    cc = planToClient(xx, 700); pev(stage, 'pointermove', cc.x, cc.y);
+    if (simF.z !== lastZ) { seg1.push(simF.z); lastZ = simF.z; }
+  }
+  for (var k3 = 0; k3 < 10; k3++) {      // 邊界擺動 281⇄284：不得有任何 z 變化
+    [281, 284].forEach(function (wx) {
+      cc = planToClient(wx, 700); pev(stage, 'pointermove', cc.x, cc.y);
+      if (simF.z !== lastZ) { seg2++; lastZ = simF.z; }
+    });
+  }
+  for (xx = 284; xx >= 180; xx -= 2) {   // 拉出：非遞增（40→…→0）
+    cc = planToClient(xx, 700); pev(stage, 'pointermove', cc.x, cc.y);
+    if (simF.z !== lastZ) { seg3.push(simF.z); lastZ = simF.z; }
+  }
+  pev(stage, 'pointerup', cc.x, cc.y);
+  var mono1 = seg1.every(function (v, i2) { return i2 === 0 || v > seg1[i2 - 1]; });
+  var mono3 = seg3.every(function (v, i2) { return i2 === 0 || v < seg3[i2 - 1]; });
+  var simOk = mono1 && seg1.length <= 2 && seg2 <= 1 && mono3 && simF.z === 0;
+  delFurniture(simF.id);
+  ck('2D 指標拖曳模擬無閃爍', simOk,
+     '(推進' + seg1.join('→') + '｜擺動變化' + seg2 + '｜拉出' + seg3.join('→') + ')');
+  // 29. 真實指標事件拖曳模擬（3D）：推進 z 非遞減、拉出非遞增
+  setMode(true); cam.rz = 20; cam.rx = 60; applyCam();
+  var sim3 = addFurniture({ name: '模擬3D', w: 60, d: 60, h: 20, x: 200, y: 700, rot: 0, color: '#777' });
+  rebuildBoxes();
+  var r3 = scene3d.getBoundingClientRect();
+  function p3c(px_, py_, z_) { var s3 = fwd3d(px_, py_, z_); return { x: r3.left + s3[0], y: r3.top + s3[1] }; }
+  var bxSim = boxHost.querySelector('[data-bid="' + sim3.id + '"] .face');
+  var cd = p3c(200, 700, sim3.z);
+  pev(bxSim, 'pointerdown', cd.x, cd.y);
+  lastZ = sim3.z;
+  var up3 = [], down3 = [];
+  for (xx = 200; xx <= 330; xx += 2) {
+    cc = p3c(xx, 700, sim3.z); pev(scene3d, 'pointermove', cc.x, cc.y);
+    if (sim3.z !== lastZ) { up3.push(sim3.z); lastZ = sim3.z; }
+  }
+  for (xx = 330; xx >= 170; xx -= 2) {
+    cc = p3c(xx, 700, sim3.z); pev(scene3d, 'pointermove', cc.x, cc.y);
+    if (sim3.z !== lastZ) { down3.push(sim3.z); lastZ = sim3.z; }
+  }
+  pev(scene3d, 'pointerup', cc.x, cc.y);
+  var mUp = up3.every(function (v, i2) { return i2 === 0 || v > up3[i2 - 1]; });
+  var mDn = down3.every(function (v, i2) { return i2 === 0 || v < down3[i2 - 1]; });
+  var sim3Ok = mUp && mDn && sim3.z === 0;
+  delFurniture(sim3.id);
+  setMode(false);
+  ck('3D 指標拖曳模擬無閃爍', sim3Ok,
+     '(推進' + up3.join('→') + '｜拉出' + down3.join('→') + ')');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
