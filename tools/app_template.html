@@ -190,7 +190,7 @@
     <button id="btnGuide" class="active">測距</button>
     <button id="btnMeasure">📏 量測</button>
     <span class="spacer"></span>
-    <button id="btnPanel">🛋 家具</button>
+    <button id="btnPanel" class="active">🛋 家具</button>
     <button id="btnExport">匯出</button>
     <button id="btnImport">匯入</button>
     <button id="btnVer">💾 版本</button>
@@ -206,7 +206,7 @@
       </div></div>
       <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳平移、Shift+點選多選（R 群組旋轉）｜拖近家具磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Ctrl+C/V 複製貼上</div>
     </div>
-    <div id="panel">
+    <div id="panel" class="open">
       <h3 id="panelTitle">新增家具／家電</h3>
       <div class="btnrow" style="margin-top:0">
         <button id="btnMan">👨 男主人</button>
@@ -2139,12 +2139,31 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   settleMoved(mB);
   delFurniture(mB.id);
   ck('人不可堆疊/不可被覆蓋', pNoOv && fNoOv, '(人壓家具=' + pNoOv + ', 家具壓人=' + fNoOv + ')');
+  // 32. 流理台外框＝障礙物（磁吸/阻擋在外框；洗手槽內框不得進 WALLS）
+  var kL = null;
+  WALLS.forEach(function (w_) { if (Math.abs(w_[0] - w_[2]) < 0.01 && w_[0] > 354 && w_[0] < 355) kL = w_[0]; });
+  var sinkInWalls = WALLS.some(function (w_) {
+    return (Math.abs(w_[0] - 364.53) < 0.2 && Math.abs(w_[2] - 364.53) < 0.2) ||
+           (Math.abs(w_[0] - 399.53) < 0.2 && Math.abs(w_[2] - 399.53) < 0.2);
+  });
+  var kb = addFurniture({ name: '廚房測試', w: 60, d: 60, h: 40, x: 290, y: 1100, rot: 0, color: '#888' });
+  dragStart = { x: kb.x, y: kb.y, z: 0, rot: 0, valid: true };
+  lastGood = { x: kb.x, y: kb.y };
+  beginCarry(kb);
+  dragTo(kb, kL - 33, 1100);            // 右緣距外框 3cm → 磁吸貼齊外框
+  var kSnap = Math.abs((kb.x + 30) - kL) < 0.01 && !collidesWalls(kb);
+  dragTo(kb, kL + 20, 1100);            // 再往內推 → 被外框阻擋，不可覆蓋流理台
+  var kBlock = kb.x + 30 <= kL + 0.01 && !collidesWalls(kb);
+  settleMoved(kb);
+  delFurniture(kb.id);
+  ck('磁吸/阻擋在流理台外框', kL !== null && !sinkInWalls && kSnap && kBlock,
+     '(外框x=' + (kL ? kL.toFixed(2) : '無') + ', 洗手槽入牆=' + sinkInWalls + ', 貼齊=' + kSnap + ', 阻擋=' + kBlock + ')');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
   if (st === 'grid') $('btnGrid').click();
   if (st === '3d') { setMode(true); cam.rz = 25; cam.rx = 60; applyCam(); }
-  if (st === 'panel') $('btnPanel').click();
+  if (st === 'panel') { panel.classList.add('open'); $('btnPanel').classList.add('active'); }   // 面板已預設開啟
   if (st === 'sel') { setSel(furniture[0].id); refreshAll(); }
   if (st === 'tut') openTut();
   if (st === 'ver') { saveVersion('示範配置'); $('btnVer').click(); }
