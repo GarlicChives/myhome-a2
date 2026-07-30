@@ -11,17 +11,19 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 43 項）。
+**新功能必須同步新增對應斷言**（selftest 目前 54 項）。自測不可只靠截圖：必須含真實
+PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類（含 14 種內建物件全規則掃描）。
 
 ## 標準工作流程（每次需求都照做）
 
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **43 項全 PASS**；有新功能先補斷言再回到步驟 3。
-5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood），確認版面與互動狀態。
+4. headless Chrome 跑 `?selftest=1` → **54 項全 PASS**；有新功能先補斷言再回到步驟 3。
+5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood / st=cab），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
-7. 交付後 `git add -A && git commit && git push`（部署見「互動設計」末節）。
+7. 交付後 `git add -A && git commit`。**永久規則：`git push` 與部署必須等使用者明確下令才可執行**
+   ——commit 完成後回報「已就緒，等指令 push」，收到指令才 push 並以 live URL 重跑 selftest。
 8. Claude in Chrome 擴充每次可再試 `list_connected_browsers`（使用者 profile：`Profile 11`／小譁
    v4578469@gmail.com；至今未連上，成功即可實機操作驗證）。
 
@@ -63,10 +65,23 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   實作：updateVGuides→#vgHost（獨立於 boxHost，rebuild 不清除）、.vg-line 世界垂直線僅繞 z 反轉面向鏡頭、
   標籤「↕ N」billboard；updateBillboards 以 world.querySelectorAll 統一更新。
 - 主題＝三預設（黑/白/**淺暖木紋**）＋調色盤自訂底色（header #themeColor）：applyTheme 以亮度 lum>0.5
-  自動判定亮暗 → 格線與公分數（guide/dim/edim/m/fdim 文字）切換高對比色；木紋＝.wood class（CSS 覆蓋
+  自動判定亮暗 → 格線與公分數（guide/dim/m/fdim 文字）切換高對比色；木紋＝.wood class（CSS 覆蓋
   **必須放在 __LIGHT_CSS__ 之後**）＋SVG pattern #woodPat 作圖底；主題存 localStorage a2home_theme。
-  **st=light 依賴白色預設按鈕 id=btnTheme，勿改 id**。
+  **主題只變更 bgRect（平面圖底）；平面圖以外（stage/scene3d 背景）固定黑色**，
+  因此外徑鏈（edim，畫在圖外）恆用亮色不隨主題。**st=light 依賴白色預設按鈕 id=btnTheme，勿改 id**。
 - 物件顏色＝調色盤（#fColor input type=color，取代舊 16 色格）：選取物件即時套用、面板同步顯示 hex。
+- **系統內建物件 14 種**（BUILTINS：桌子/冰箱/隔板60×60×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
+  小餐邊推車/垃圾桶/投影機/洗衣籃；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
+  改用 60×70×180）：內建於程式、不受存檔影響；**本質＝一般物件**（可自訂長寬高、受全部物件規則）；
+  3D 以 SKIN3D 多部件外皮呈現（比例縮放）。**正面＝+y（預設視角近側）**：門面/櫃體開口/沙發座向皆同。
+- **選取懸浮功能列 #selBar**（單選時顯示於物件上方）：🗄 櫃體／⟳90°／⧉ 複製／🗑 刪除（人物無櫃體鈕）。
+- **櫃體編輯 Modal（90vw×90vh）**：物件變空心殼（殼厚 CAB_TS=2cm、正面 +y 開放）＋隔板＋櫃內物品。
+  f.cab={t(隔板厚度預設 2、範圍 0.4~3), parts:[{dir:'h'|'v',pos,t}], items:[{w,d,h,x,y,z,...}]}；
+  隔板新增自動延伸至內徑並平均分配（span*(i+1)/(n+1)＝由中間算起不貼邊）、可拖曳/輸入調位
+  （clamp：不出內徑、不與同向隔板重疊）；物品可拖（x/z）、放開自動落於櫃底或隔板頂（cabItemFloor）、
+  面板與 3D 標籤即時顯示與內徑/隔板距離（cabItemDists），放不下（cabItemBad）整件變紅。
+  cab 資料隨 furniture 存檔/匯出/複製；主 2D 顯內徑虛線框＋垂直隔板、主 3D 空心渲染。
+  Modal 自有 3D（cabCam/cabPt 與 fwd3d 同構數學，供拖曳軸投影）。
 - Shift+點選多選＋R 群組旋轉（繞群組外框中心）；Ctrl+C/V 複製貼上；滾輪換疊放層。
 - 選取顯示長寬高：CAD 標註樣式畫在對應邊緣（2D 標註線、3D 邊緣 billboard）。
 - 3D 標籤一律 billboard（反向抵銷 rotateX/rotateZ＋反縮放）。
