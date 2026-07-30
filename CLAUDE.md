@@ -11,15 +11,15 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 37 項）。
+**新功能必須同步新增對應斷言**（selftest 目前 43 項）。
 
 ## 標準工作流程（每次需求都照做）
 
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **37 項全 PASS**；有新功能先補斷言再回到步驟 3。
-5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver），確認版面與互動狀態。
+4. headless Chrome 跑 `?selftest=1` → **43 項全 PASS**；有新功能先補斷言再回到步驟 3。
+5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit && git push`（部署見「互動設計」末節）。
 8. Claude in Chrome 擴充每次可再試 `list_connected_browsers`（使用者 profile：`Profile 11`／小譁
@@ -47,11 +47,26 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 
 ## 互動設計（已定案，勿回退）
 
+- **名詞定義（與使用者對齊）**：「物件」＝家具/家電/盛板/放置物等，可設長寬高與名稱（**名稱可留空**），
+  受「物件規則」約束：磁吸反饋、不可覆蓋牆面、不可懸空（臨邊支點）、可堆疊、總高不可超過天花板。
 - 家具拖曳＝狀態機 free⇄mag⇄stack，遲滯門檻（吸附-2.5cm／脫離-6cm／入疊 min(15cm,半寬)／出疊 40%）。
   **嚴禁二值切換造成的閃爍**。家具磁鐵可突破（推入即疊放、回拖退回貼邊）；牆＝硬阻擋不可突破、
   磁吸 5cm、沿牆滑動、嚴禁覆蓋。
-- 禁止懸空：支點只能是地板或家具頂面（settleGravity），拖曳下方物件整疊連動（beginCarry 遞迴）。
+- 不可懸空＝**臨邊支點規則**（2026-07-30 改版，取代舊「支點只能是地板/家具頂面」）：物件**任一臨邊**
+  有支點即可停留——地板、其他物件（頂/底/側面貼合 ±0.25cm）、天花板（頂到 CEIL）、牆面（側貼＝可釘固定）。
+  settleGravity 先錨定（底=地板、側貼牆 wallTouch、頂=天花板 ceilTouch），再與已支撐物件面接觸連鎖
+  （objContact BFS），其餘由低到高落至最高支撐面；拖曳中貼牆/頂天花板亦保持高度（dragTo）。
+  拖曳下方物件整疊連動（beginCarry 遞迴）。
 - 天花板上限預設 280cm（面板可調），超高整件變紅並退回。
+- 懸停尺標＝水平四向距離（2D/3D、含物件距離、距門口）＋**垂直臨近兩點距離（僅 3D＝非正俯瞰視角）**：
+  懸停物件→頂面↑至上方物件底/天花板、底面↓至下方物件頂/地板；懸停平面→該點↑至上方物件底/天花板。
+  實作：updateVGuides→#vgHost（獨立於 boxHost，rebuild 不清除）、.vg-line 世界垂直線僅繞 z 反轉面向鏡頭、
+  標籤「↕ N」billboard；updateBillboards 以 world.querySelectorAll 統一更新。
+- 主題＝三預設（黑/白/**淺暖木紋**）＋調色盤自訂底色（header #themeColor）：applyTheme 以亮度 lum>0.5
+  自動判定亮暗 → 格線與公分數（guide/dim/edim/m/fdim 文字）切換高對比色；木紋＝.wood class（CSS 覆蓋
+  **必須放在 __LIGHT_CSS__ 之後**）＋SVG pattern #woodPat 作圖底；主題存 localStorage a2home_theme。
+  **st=light 依賴白色預設按鈕 id=btnTheme，勿改 id**。
+- 物件顏色＝調色盤（#fColor input type=color，取代舊 16 色格）：選取物件即時套用、面板同步顯示 hex。
 - Shift+點選多選＋R 群組旋轉（繞群組外框中心）；Ctrl+C/V 複製貼上；滾輪換疊放層。
 - 選取顯示長寬高：CAD 標註樣式畫在對應邊緣（2D 標註線、3D 邊緣 billboard）。
 - 3D 標籤一律 billboard（反向抵銷 rotateX/rotateZ＋反縮放）。

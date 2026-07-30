@@ -171,7 +171,32 @@
   .rot-ring { fill: rgba(37,99,235,.25); stroke: #4b8bff; vector-effect: non-scaling-stroke; cursor: grab; }
   .rot-ring.snapping { fill: rgba(33,192,139,.45); stroke: #21c08b; }
   .rot-arrow { fill: #cfe1ff; pointer-events: none; }
+  /* ---------- 3D 垂直測距（非正俯瞰視角） ---------- */
+  .vg-line { position: absolute; background: #21c08b; opacity: .9; transform-origin: 0 0; pointer-events: none; }
+  #scene3d.light .vg-line { background: #0e7a55; }
+  #scene3d .lbl3d.vglbl { color: #35d9a2; }
+  #scene3d.light .lbl3d.vglbl { color: #0b6647; }
+  #vgHost { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; pointer-events: none; }
+  /* ---------- 調色盤 ---------- */
+  input[type=color] { width: 34px; height: 28px; padding: 1px 2px; border: 1px solid #55555f; border-radius: 6px;
+                      background: #33333d; cursor: pointer; }
+  #panel .colorrow { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  #panel .colorrow input[type=color] { width: 46px; height: 30px; }
+  #panel .colorrow .hex { color: #9ab; font-size: 12px; }
   __LIGHT_CSS__
+  /* ---------- 淺暖木紋主題：格線與公分數改高對比深棕（置於 LIGHT_CSS 之後以覆蓋 .light） ---------- */
+  #stage.wood, #scene3d.wood { background: repeating-linear-gradient(90deg, #e9d6b2 0 34px, #e1cba2 34px 70px, #eeddbd 70px 120px); }
+  .wood .grid-minor { stroke: rgba(82,52,18,.42); }
+  .wood .grid-major { stroke: rgba(82,52,18,.68); }
+  .wood .guide-line { stroke: #0a6a49; }
+  .wood .guide-txt { fill: #073f2c; stroke: rgba(255,247,230,.95); }
+  .wood .dim-txt { fill: #8a3c00; stroke: rgba(255,247,230,.95); }
+  .wood .edim-txt { fill: #0b4a75; stroke: rgba(255,247,230,.95); }
+  .wood .fdim-txt { fill: #6b5200; stroke: rgba(255,247,230,.95); }
+  .wood .m-txt { fill: #a2002f; stroke: rgba(255,247,230,.95); }
+  .wood .furn-txt { fill: #1a1208; stroke: rgba(255,247,230,.8); }
+  #scene3d.wood .lbl3d { color: #241605; text-shadow: 0 1px 4px rgba(255,247,230,.95), 0 0 2px rgba(255,247,230,.95); }
+  #scene3d.wood .lbl3d.vglbl { color: #0b6647; }
 </style>
 </head>
 <body>
@@ -183,14 +208,19 @@
       <button id="btn3d">3D 檢視</button>
     </div>
     <button id="btnFit">符合視窗</button>
-    <button id="btnTheme">白底</button>
+    <div class="seg" id="themeSeg">
+      <button id="btnThemeDark" class="active" title="黑底">黑</button>
+      <button id="btnTheme" title="白底">白</button>
+      <button id="btnThemeWood" title="淺暖木紋">木紋</button>
+    </div>
+    <input type="color" id="themeColor" value="#1c1c22" title="自訂底色（調色盤）">
     <button id="btnGrid">格線</button>
     <button id="btnDims" class="active">內徑</button>
     <button id="btnEDims" class="active">外徑</button>
     <button id="btnGuide" class="active">測距</button>
     <button id="btnMeasure">📏 量測</button>
     <span class="spacer"></span>
-    <button id="btnPanel" class="active">🛋 家具</button>
+    <button id="btnPanel" class="active">🛋 物件</button>
     <button id="btnExport">匯出</button>
     <button id="btnImport">匯入</button>
     <button id="btnVer">💾 版本</button>
@@ -203,16 +233,17 @@
       <div id="viewport"><div id="world">
         <div id="floorHost"></div>
         <div id="boxHost"></div>
+        <div id="vgHost"></div>
       </div></div>
-      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳平移、Shift+點選多選（R 群組旋轉）｜拖近家具磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Ctrl+C/V 複製貼上</div>
+      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳平移、Shift+點選多選（R 群組旋轉）｜懸浮顯示四向＋垂直距離｜拖近物件磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Ctrl+C/V 複製貼上</div>
     </div>
     <div id="panel" class="open">
-      <h3 id="panelTitle">新增家具／家電</h3>
+      <h3 id="panelTitle">新增物件（家具／家電…）</h3>
       <div class="btnrow" style="margin-top:0">
         <button id="btnMan">👨 男主人</button>
         <button id="btnWoman">👩 女主人</button>
       </div>
-      <label>名稱</label>
+      <label>名稱（可留空）</label>
       <input type="text" id="fName" value="沙發" maxlength="12">
       <div class="dimrow">
         <div><label>長（cm）</label><input type="number" id="fW" value="220" min="1" max="2000"></div>
@@ -228,8 +259,11 @@
       </div>
       <label>天花板高（cm｜堆疊上限）</label>
       <input type="number" id="fCeil" value="280" min="100" max="600">
-      <label>顏色</label>
-      <div id="palette"></div>
+      <label>顏色（調色盤）</label>
+      <div class="colorrow">
+        <input type="color" id="fColor" value="#c9a227">
+        <span class="hex" id="fColorHex">#c9a227</span>
+      </div>
       <div class="btnrow">
         <button id="btnAdd">➕ 新增</button>
         <button id="btnUpdate" disabled>套用修改</button>
@@ -266,8 +300,8 @@
       <h2>🏠 快速上手</h2>
       <div>本頁由建商 CAD 原圖（日安TOKYO・A2戶型）精確轉換，<b>所有尺寸與圖面一致</b>（單位 cm），量測結果可直接用於施工溝通。</div>
       <div class="step"><b>① 檢視</b><span>滾輪縮放、拖曳平移；「3D 檢視」拖曳旋轉視角、Shift+拖曳平移。</span></div>
-      <div class="step"><b>② 量測</b><span>游標懸浮即顯示四向距離（含與家具的距離）；「📏 量測」點兩點精準量距，自動吸附圖面節點。</span></div>
-      <div class="step"><b>③ 家具</b><span>「🛋 家具」輸入長寬高新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；Shift+點選可多選（R 群組旋轉）、Ctrl+C/V 複製、Delete 刪除。</span></div>
+      <div class="step"><b>② 量測</b><span>游標懸浮即顯示四向距離（含與物件的距離）；3D 檢視（非正俯瞰）另顯示垂直方向上下兩點距離；「📏 量測」點兩點精準量距，自動吸附圖面節點。</span></div>
+      <div class="step"><b>③ 物件</b><span>「🛋 物件」輸入長寬高（名稱可留空、顏色用調色盤）新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；物件任一臨邊有支點（地板／物件／天花板／牆面＝可釘固定）即可停留；Shift+點選可多選（R 群組旋轉）、Ctrl+C/V 複製、Delete 刪除。</span></div>
       <div class="step"><b>④ 儲存/分享</b><span>配置隨時自動儲存在你的瀏覽器，下次開啟（含重開機）自動接續；「💾 版本」可另存多個方案並隨時還原；「匯出/匯入」JSON 檔可備份或跨裝置分享。</span></div>
       <div class="note">匯入 CAD：本頁已內建 A2 戶型圖面；更換其他戶型／建案需以隨附 tools 轉檔管線重新產生頁面（DWG→DXF→HTML），一般使用者無需操作，未來將支援直接上傳 CAD 檔。</div>
       <div class="foot">
@@ -299,6 +333,7 @@ var FIT = (function () {
 
 /* ============ base svg ============ */
 var stage = document.getElementById('stage');
+var vgHost = document.getElementById('vgHost');   // 3D 垂直測距層（獨立於 boxHost，rebuild 不清除）
 var tpl = document.getElementById('baseSvgT');
 var host = document.createElement('div');
 host.innerHTML = tpl.innerHTML;
@@ -539,10 +574,56 @@ function setHeight(f, nh) {
   if (Math.abs(dTop) > 0.001) above.forEach(function (o) { o.z += dTop; });
   return clamped;
 }
-// 禁止懸空：支點只能是地板或其他家具頂面。由低到高逐件落到最高支撐面
+// 臨邊支點判定（物件規則）：物件「任一臨邊」須有支點——地板、其他物件、天花板或牆面（實務可釘固定）
+function wallTouch(f) {   // 任一側邊貼牆（±0.25cm；磁吸貼齊後為 0）
+  var cs = obbCorners(f);
+  for (var i = 0; i < WALLS.length; i++) {
+    var w_ = WALLS[i], b1 = [w_[0], w_[1]], b2 = [w_[2], w_[3]];
+    for (var j = 0; j < 4; j++) {
+      if (segSegNear(cs[j], cs[(j + 1) % 4], b1, b2).d <= 0.25) return true;
+    }
+  }
+  return false;
+}
+function ceilTouch(f) { return Math.abs(f.z + f.h - CEIL) <= 0.25; }
+// 兩物件任一面接觸：上下面對接（頂↔底）或側面貼合（z 區間重疊且邊距 ≤0.25cm）
+function objContact(f, o) {
+  if (obbOverlap(f, o)) {
+    return Math.abs(f.z - (o.z + o.h)) <= 0.3 || Math.abs(o.z - (f.z + f.h)) <= 0.3;
+  }
+  if (!(f.z < o.z + o.h - 0.25 && o.z < f.z + f.h - 0.25)) return false;
+  var A = obbCorners(f), B = obbCorners(o);
+  for (var i = 0; i < 4; i++) {
+    for (var j = 0; j < 4; j++) {
+      if (segSegNear(A[i], A[(i + 1) % 4], B[j], B[(j + 1) % 4]).d <= 0.25) return true;
+    }
+  }
+  return false;
+}
+// 禁止懸空（臨邊支點規則）：底面=地板、側邊貼牆、頂到天花板者保持原高度；
+// 與「已有支撐」物件任一面接觸者連鎖支撐（如釘掛於壁掛層板側面）；其餘由低到高落到最高支撐面
 function settleGravity() {
+  var anchored = {};
+  furniture.forEach(function (f) {
+    if (isPerson(f)) { f.z = 0; anchored[f.id] = true; return; }   // 人物永遠站地板
+    if (f.z <= 0.25) { f.z = 0; anchored[f.id] = true; return; }   // 底面＝地板
+    if (wallTouch(f) || ceilTouch(f)) anchored[f.id] = true;       // 側貼牆／頂到天花板
+  });
+  var changed = true;
+  while (changed) {
+    changed = false;
+    furniture.forEach(function (f) {
+      if (anchored[f.id] || isPerson(f)) return;
+      for (var i = 0; i < furniture.length; i++) {
+        var o = furniture[i];
+        if (o.id !== f.id && anchored[o.id] && !isPerson(o) && objContact(f, o)) {
+          anchored[f.id] = true; changed = true; return;
+        }
+      }
+    });
+  }
   furniture.slice().sort(function (a, b) { return a.z - b.z; }).forEach(function (f) {
-    if (isPerson(f)) { f.z = 0; return; }   // 人物永遠站地板
+    if (anchored[f.id]) return;
     var best = 0;
     furniture.forEach(function (o) {
       if (o.id !== f.id && o.z + o.h <= f.z + 0.25 && obbOverlap(f, o)) best = Math.max(best, o.z + o.h);
@@ -636,6 +717,7 @@ function updateGuides(p, fobj) {
     else e.tx.removeAttribute('transform');
     e.tx.textContent = label;
   }
+  updateVGuides(p, fobj);   // 3D（非正俯瞰視角）：垂直方向臨近兩點距離
   updateDoorDist(fobj);   // 懸停/拖曳家具時：顯示與最近門口的距離
 }
 function ptSegNear(px_, py_, ax, ay, bx, by) {
@@ -685,8 +767,53 @@ function updateDoorDist(f) {
   if (mode3d) tx.setAttribute('transform', 'rotate(' + (-cam.rz) + ' ' + mx + ' ' + my + ')');
   tx.textContent = '距門口 ' + (Math.round(best.d * 10) / 10);
 }
+// 垂直方向臨近兩點距離（僅 3D＝非正俯瞰視角顯示）：
+// 懸停物件→頂面往上至上方物件底/天花板、底面往下至下方物件頂/地板；懸停平面→該點往上至上方物件底/天花板
+function updateVGuides(p, fobj) {
+  vgHost.innerHTML = '';
+  if (!mode3d || !guidesOn) return;
+  var items = [];
+  if (fobj) {
+    var top = fobj.z + fobj.h, bot = fobj.z;
+    var upTo = CEIL, dnTo = 0;
+    furniture.forEach(function (o) {
+      if (o.id === fobj.id || inCarry(o.id) || isPerson(o)) return;
+      if (!obbOverlap(o, fobj)) return;
+      if (o.z >= top - 0.01) upTo = Math.min(upTo, o.z);
+      if (o.z + o.h <= bot + 0.01) dnTo = Math.max(dnTo, o.z + o.h);
+    });
+    if (upTo - top > 0.05) items.push({ x: fobj.x, y: fobj.y, z0: top, z1: upTo });
+    if (bot - dnTo > 0.05) items.push({ x: fobj.x, y: fobj.y, z0: dnTo, z1: bot });
+  } else if (p && p.x >= WB[0] && p.x <= WB[2] && p.y >= WB[1] && p.y <= WB[3]) {
+    var upTo2 = CEIL;
+    furniture.forEach(function (o) {
+      if (isPerson(o)) return;
+      if (o.z > 0.05 && pointInObb([p.x, p.y], obbCorners(o))) upTo2 = Math.min(upTo2, o.z);
+    });
+    if (upTo2 > 0.05) items.push({ x: p.x, y: p.y, z0: 0, z1: upTo2 });
+  }
+  items.forEach(function (it) {
+    var ln = document.createElement('div');
+    ln.className = 'vg-line';
+    ln.setAttribute('data-x', it.x - W / 2);
+    ln.setAttribute('data-y', it.y - H / 2);
+    ln.setAttribute('data-z', it.z0);
+    ln.style.height = (it.z1 - it.z0) + 'px';
+    vgHost.appendChild(ln);
+    var lb = document.createElement('div');
+    lb.className = 'lbl3d vglbl';
+    lb.setAttribute('data-x', it.x - W / 2);
+    lb.setAttribute('data-y', it.y - H / 2);
+    lb.setAttribute('data-z', (it.z0 + it.z1) / 2);
+    lb.style.fontSize = '13px';
+    lb.textContent = '↕ ' + (Math.round((it.z1 - it.z0) * 10) / 10);
+    vgHost.appendChild(lb);
+  });
+  updateBillboards();
+}
 function hideGuides() {
   doorLayer.innerHTML = '';
+  vgHost.innerHTML = '';
   if (!guideEls) return;
   guideEls.forEach(function (e) { e.ln.setAttribute('display', 'none'); e.tx.setAttribute('display', 'none'); });
 }
@@ -770,13 +897,11 @@ function toggleSel(id) {
   selId = selIds.length ? selIds[selIds.length - 1] : null;
 }
 function selectedObjs() { return selIds.map(byId).filter(Boolean); }
-var COLORS = ['#c9a227','#8d6e63','#4e7a51','#3d6ea5','#7b5ea7','#b0503c','#607d8b','#9e9e9e',
-              '#d7b98e','#e0e0e0','#37474f','#264d33','#1e3a5f','#5c2e2e','#f2d16b','#88b0a0'];
-var curColor = COLORS[0];
+var curColor = '#c9a227';
 
 function addFurniture(o) {
   var f = {
-    id: fSeq++, name: o.name || '物件',
+    id: fSeq++, name: o.name != null ? o.name : '物件',   // 名稱可留空（''）
     w: +o.w || 60, d: +o.d || 60, h: +o.h || 60, z: +o.z || 0,
     x: o.x != null ? o.x : vb.x + vb.w / 2, y: o.y != null ? o.y : vb.y + vb.h / 2,
     rot: o.rot || 0, color: o.color || curColor
@@ -940,32 +1065,27 @@ function loadState() {
 /* ============ panel ============ */
 var panel = document.getElementById('panel');
 var $ = function (id) { return document.getElementById(id); };
-(function buildPalette() {
-  var pal = $('palette');
-  COLORS.forEach(function (c) {
-    var d = document.createElement('div');
-    d.className = 'sw' + (c === curColor ? ' sel' : '');
-    d.style.background = c;
-    d.addEventListener('click', function () {
-      curColor = c;
-      pal.querySelectorAll('.sw').forEach(function (x) { x.classList.remove('sel'); });
-      d.classList.add('sel');
-      var f = getSel();
-      if (f) { f.color = c; refreshAll(); }
-    });
-    pal.appendChild(d);
-  });
-})();
+// 顏色＝調色盤選取（作用於新增預設色；已選取物件即時套用）
+$('fColor').addEventListener('input', function () {
+  curColor = this.value;
+  $('fColorHex').textContent = curColor;
+  var f = getSel();
+  if (f) { f.color = curColor; refreshAll(); }
+});
 function syncPanel() {
   var f = getSel();
   $('btnUpdate').disabled = $('btnDup').disabled = $('btnDel').disabled = !f;
   $('btnStack').disabled = !(f && !isPerson(f) && furniture.some(function (o) { return o.id !== f.id && !isPerson(o) && obbOverlap(f, o); }));
   $('panelTitle').textContent = f
-    ? '編輯：' + f.name + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
-    : '新增家具／家電';
+    ? '編輯：' + (f.name || '（未命名）') + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
+    : '新增物件（家具／家電…）';
   if (f) {   // 使用者正在輸入的欄位不回寫（避免游標被打斷）
     var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot };
     for (var k in m) { var elk = $(k); if (document.activeElement !== elk) elk.value = m[k]; }
+    if (document.activeElement !== $('fColor') && /^#[0-9a-fA-F]{6}$/.test(f.color)) {
+      $('fColor').value = f.color;
+      $('fColorHex').textContent = f.color;
+    }
   }
 }
 function renderList() {
@@ -975,7 +1095,7 @@ function renderList() {
     var d = document.createElement('div');
     d.className = 'fitem' + (isSel(f.id) ? ' sel' : '');
     d.innerHTML = '<span class="dot" style="background:' + f.color + '"></span>' +
-      '<span class="nm">' + esc(f.name) + '</span><span class="sz">' +
+      '<span class="nm">' + (esc(f.name) || '（未命名）') + '</span><span class="sz">' +
       (isPerson(f) ? f.h + 'cm・' + (f.weight || '?') + 'kg' : f.w + '×' + f.d + '×' + f.h) + '</span>' +
       '<span class="del" title="刪除">✕</span>';
     d.addEventListener('click', function (ev) {
@@ -988,7 +1108,7 @@ function renderList() {
 }
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 function readForm() {
-  return { name: $('fName').value.trim() || '物件',
+  return { name: $('fName').value.trim(),   // 可留空
            w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
            h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
            rot: +$('fR').value || 0, color: curColor };
@@ -1272,7 +1392,8 @@ function dragTo(f, nx, ny) {
     } else {
       stackCtx.lastHint = '';
     }
-    f.z = 0;   // 未疊放即落地（禁止懸空）
+    // 未疊放即落地；但貼牆/頂到天花板（臨邊支點，可釘固定）可維持原高度
+    if (!(f.z > 0 && (wallTouch(f) || ceilTouch(f)))) f.z = 0;
     stackCtx.key = ''; stackCtx.count = 0; stackCtx.memb = {};
     applyCarry(f);
     return;
@@ -1299,7 +1420,7 @@ function dragTo(f, nx, ny) {
     .sort(function (a, b) { return (a.z - b.z) || ((a.z + a.h) - (b.z + b.h)) || (a.id - b.id); });
   if (!ov.length) {   // AABB 穿入但實際（OBB）未重疊（旋轉物件邊角）：視為磁吸
     stackCtx.mode = 'mag'; stackCtx.memb = {};
-    f.z = 0;
+    if (!(f.z > 0 && (wallTouch(f) || ceilTouch(f)))) f.z = 0;
     stackCtx.key = ''; stackCtx.count = 0;
     applyCarry(f);
     return;
@@ -1508,16 +1629,49 @@ $('btnMClear').addEventListener('click', function () {
   measures = []; mStart = null; redrawMeasures(); saveState();
 });
 
+/* ============ 主題：黑／白／淺暖木紋 三預設＋調色盤自訂底色 ============ */
+var light = false, themeSel = 'dark';
+(function buildWoodPattern() {   // 平面圖底的木紋（SVG pattern，隨 svg 在 2D/3D 間移動）
+  var defs = el('defs', {});
+  svg.insertBefore(defs, svg.firstChild);
+  var pat = el('pattern', { id: 'woodPat', patternUnits: 'userSpaceOnUse', width: 120, height: 120 }, defs);
+  el('rect', { x: 0, y: 0, width: 120, height: 120, fill: '#e9d6b2' }, pat);
+  el('rect', { x: 34, y: 0, width: 36, height: 120, fill: '#e1cba2' }, pat);
+  el('rect', { x: 70, y: 0, width: 50, height: 120, fill: '#eeddbd' }, pat);
+  el('rect', { x: 52, y: 0, width: 3, height: 120, fill: '#d4b98c' }, pat);
+})();
+function lum(hex) {   // 相對亮度 0~1：決定格線/公分數用深色（亮底）或亮色（暗底）→ 肉眼高對比
+  var m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return 0;
+  var n = parseInt(m[1], 16);
+  return (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+}
+function applyTheme(t) {   // t: 'dark' | 'light' | 'wood' | '#rrggbb'（調色盤自訂）
+  themeSel = t;
+  var isWood = t === 'wood';
+  var preset = isWood || t === 'dark' || t === 'light';
+  var bg = t === 'dark' ? '#000000' : t === 'light' ? '#ffffff' : isWood ? '#e9d6b2' : t;
+  var sc3 = document.getElementById('scene3d');
+  light = isWood || lum(bg) > 0.5;
+  [document.body, stage, sc3].forEach(function (n) {
+    n.classList.toggle('light', light);
+    n.classList.toggle('wood', isWood);
+  });
+  bgRect.style.fill = isWood ? 'url(#woodPat)' : bg;
+  stage.style.background = preset ? '' : bg;   // 預設主題交給 CSS（含木紋紋理），自訂色用實色
+  sc3.style.background = preset ? '' : bg;
+  $('btnThemeDark').classList.toggle('active', t === 'dark');
+  $('btnTheme').classList.toggle('active', t === 'light');
+  $('btnThemeWood').classList.toggle('active', t === 'wood');
+  if (/^#/.test(t)) $('themeColor').value = t;
+  try { localStorage.setItem('a2home_theme', t); } catch (e) {}
+}
+$('btnThemeDark').addEventListener('click', function () { applyTheme('dark'); });
+$('btnTheme').addEventListener('click', function () { applyTheme('light'); });
+$('btnThemeWood').addEventListener('click', function () { applyTheme('wood'); });
+$('themeColor').addEventListener('input', function () { applyTheme(this.value); });
+
 /* ============ toggles ============ */
-var light = false;
-$('btnTheme').addEventListener('click', function () {
-  light = !light;
-  document.body.classList.toggle('light', light);
-  stage.classList.toggle('light', light);
-  document.getElementById('scene3d').classList.toggle('light', light);
-  bgRect.style.fill = light ? '#ffffff' : '#000000';
-  this.textContent = light ? '黑底' : '白底';
-});
 $('btnGrid').addEventListener('click', function () {
   var on = gridLayer.getAttribute('display') === 'none';
   gridLayer.setAttribute('display', on ? '' : 'none');
@@ -1581,9 +1735,15 @@ function applyCam() {
 // 標籤永遠面向鏡頭：反向抵銷 world 的 rotateX/rotateZ，並反縮放維持固定字級
 function updateBillboards() {
   var k = 1 / Math.max(0.05, cam.s);
-  boxHost.querySelectorAll('.lbl3d').forEach(function (d) {
+  world.querySelectorAll('.lbl3d').forEach(function (d) {
     d.style.transform = 'translate3d(' + d.getAttribute('data-x') + 'px,' + d.getAttribute('data-y') + 'px,' +
       d.getAttribute('data-z') + 'px) rotateZ(' + (-cam.rz) + 'deg) rotateX(' + (-cam.rx) + 'deg) scale(' + k + ') translate(-50%,-100%)';
+  });
+  // 垂直測距線：維持世界垂直（z 軸），僅繞 z 反轉面向鏡頭；粗細反縮放固定
+  world.querySelectorAll('.vg-line').forEach(function (d) {
+    d.style.width = (1.6 * k) + 'px';
+    d.style.transform = 'translate3d(' + d.getAttribute('data-x') + 'px,' + d.getAttribute('data-y') + 'px,' +
+      d.getAttribute('data-z') + 'px) rotateZ(' + (-cam.rz) + 'deg) rotateX(90deg)';
   });
 }
 function fit3d() {
@@ -1833,7 +1993,8 @@ function onResize() { if (mode3d) applyCam(); else { fit2d(); redrawMeasures(); 
 window.addEventListener('resize', onResize);
 
 loadState();
-settleGravity();   // 載入即修正任何懸空狀態
+settleGravity();   // 載入即修正任何無臨邊支點的懸空狀態
+try { var savedTheme = localStorage.getItem('a2home_theme'); if (savedTheme && savedTheme !== 'dark') applyTheme(savedTheme); } catch (e) {}
 $('fCeil').value = CEIL;
 fit2d();
 redrawFurniture2d(); renderList(); syncPanel(); redrawMeasures();
@@ -2269,9 +2430,96 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   delFurniture(dbox.id);
   ck('懸停顯示與門口距離', doorOk && doorCleared,
      '(門口數=' + DOORS.length + ', ' + (dt ? dt.textContent : '無標註') + ', 移開清除=' + doorCleared + ')');
+  // 34. 物件名稱可留空
+  var anon = addFurniture({ name: '', w: 30, d: 30, h: 30, x: 200, y: 760, rot: 0, color: '#999999' });
+  ck('物件名稱可留空', anon.name === '', "(name='" + anon.name + "')");
+  delFurniture(anon.id);
+  // 35. 臨邊支點-貼牆：側貼牆（可釘固定）→ 保持離地高度；沿牆拖曳仍保持；離牆 → 落地
+  var shf = addFurniture({ name: '壁掛層板', w: 60, d: 30, h: 20, x: 160, y: 800, rot: 0, color: '#8d6e63' });
+  var shPlace = Math.abs(shf.x - 160) < 0.01;   // 左緣 130 貼牆放置未被誤判碰撞
+  shf.z = 150; settleGravity();
+  var wallHold = shf.z === 150;
+  dragStart = { x: shf.x, y: shf.y, z: shf.z, rot: 0, valid: true };
+  lastGood = { x: shf.x, y: shf.y };
+  beginCarry(shf);
+  dragTo(shf, 160, 840);                        // 沿牆滑動：貼牆臨邊支點 → 不落地
+  var slideHold = shf.z === 150 && Math.abs(shf.y - 840) < 0.01;
+  settleMoved(shf);
+  var stayHold = shf.z === 150;                 // 放開後仍貼牆 → 保持
+  shf.x += 50; settleGravity();                 // 離牆且無下方支撐 → 落地
+  var wallDrop = shf.z === 0;
+  ck('臨邊支點-貼牆免落地', shPlace && wallHold && slideHold && stayHold && wallDrop,
+     '(貼牆z150=' + wallHold + ', 沿牆拖=' + slideHold + ', 放開=' + stayHold + ', 離牆落地=' + wallDrop + ')');
+  // 36. 臨邊支點-天花板/側貼物件：頂到天花板保持；側貼已支撐物件（連鎖）保持；皆無 → 落地
+  shf.x = 200; shf.y = 760; shf.z = CEIL - shf.h; settleGravity();
+  var ceilHold = Math.abs(shf.z - (CEIL - shf.h)) < 0.01;
+  shf.z = 100; settleGravity();
+  var midDrop = shf.z === 0;
+  var cabB = addFurniture({ name: '高櫃B', w: 60, d: 60, h: 100, x: 280, y: 850, rot: 0, color: '#607d8b' });
+  var sbx = addFurniture({ name: '側掛盒', w: 30, d: 30, h: 20, x: 325, y: 850, rot: 0, color: '#9e9e9e' });
+  sbx.z = 50; settleGravity();
+  var sideHold = sbx.z === 50;                  // 側面貼合高櫃（z 50~70 在櫃身 0~100 內）
+  sbx.x = 340; settleGravity();
+  var sideDrop = sbx.z === 0;
+  delFurniture(sbx.id); delFurniture(cabB.id); delFurniture(shf.id);
+  ck('臨邊支點-天花板/側貼物件', ceilHold && midDrop && sideHold && sideDrop,
+     '(頂天花板=' + ceilHold + ', 半空落地=' + midDrop + ', 側貼=' + sideHold + ', 離貼落地=' + sideDrop + ')');
+  // 37. 3D 垂直測距（非正俯瞰視角）：物件上/下兩點距離、平面點→天花板、移開清除
+  setMode(true); cam.rz = 25; cam.rx = 60; applyCam();
+  var vt = addFurniture({ name: '垂直測試', w: 50, d: 50, h: 50, x: 200, y: 760, rot: 0, color: '#666666' });
+  updateGuides({ x: vt.x, y: vt.y }, vt);
+  var vl1 = Array.prototype.map.call(vgHost.querySelectorAll('.vglbl'), function (t) { return t.textContent; });
+  var vOk1 = vl1.length === 1 && vl1[0] === '↕ 230';   // 頂面→天花板 280-50（底面貼地不顯示）
+  var vs2 = addFurniture({ name: '壁掛', w: 60, d: 30, h: 20, x: 160, y: 800, rot: 0, color: '#8d6e63' });
+  vs2.z = 150; settleGravity();
+  updateGuides({ x: vs2.x, y: vs2.y }, vs2);
+  var vl2 = Array.prototype.map.call(vgHost.querySelectorAll('.vglbl'), function (t) { return t.textContent; });
+  var vOk2 = vl2.indexOf('↕ 110') !== -1 && vl2.indexOf('↕ 150') !== -1;   // 上 280-170、下 150-0
+  delFurniture(vt.id);
+  updateGuides({ x: 200, y: 760 }, null);       // 空地平面點：地板→天花板
+  var vl3 = Array.prototype.map.call(vgHost.querySelectorAll('.vglbl'), function (t) { return t.textContent; });
+  var vOk3 = vl3.length === 1 && vl3[0] === '↕ 280';
+  hideGuides();
+  var vClr = vgHost.children.length === 0;
+  delFurniture(vs2.id);
+  setMode(false);
+  ck('3D 垂直測距(上/下/清除)', vOk1 && vOk2 && vOk3 && vClr,
+     '(物件=' + vl1.join(',') + '｜壁掛=' + vl2.join(',') + '｜空地=' + vl3.join(',') + '｜清除=' + vClr + ')');
+  // 38. 主題三預設（黑/白/木紋）＋調色盤自訂：亮暗自動判定、格線顏色隨主題改變（高對比）
+  $('btnThemeWood').click();
+  var gLn = gridLayer.querySelector('line');
+  var woodOk = document.body.classList.contains('wood') && document.body.classList.contains('light') &&
+               String(bgRect.style.fill).indexOf('woodPat') !== -1;
+  var strokeWood = getComputedStyle(gLn).stroke;
+  $('btnThemeDark').click();
+  var strokeDark = getComputedStyle(gLn).stroke;
+  var darkOk = !document.body.classList.contains('wood') && !document.body.classList.contains('light');
+  $('themeColor').value = '#ffe9c9';
+  $('themeColor').dispatchEvent(new Event('input'));
+  var custLight = document.body.classList.contains('light');   // 亮自訂色 → 深色格線/文字
+  $('themeColor').value = '#20242e';
+  $('themeColor').dispatchEvent(new Event('input'));
+  var custDark = !document.body.classList.contains('light');   // 暗自訂色 → 亮色格線/文字
+  $('btnTheme').click();
+  var lightOk = document.body.classList.contains('light') && $('btnTheme').classList.contains('active');
+  $('btnThemeDark').click();
+  ck('主題三預設+調色盤+格線對比', woodOk && strokeWood !== strokeDark && darkOk && custLight && custDark && lightOk,
+     '(木紋格線=' + strokeWood + ' / 黑底格線=' + strokeDark + ')');
+  // 39. 物件顏色調色盤：選取同步、變更即時套用
+  var fAc = byId(fA.id);
+  setSel(fAc.id); syncPanel();
+  var colSync = $('fColor').value === fAc.color;
+  $('fColor').value = '#ab34cd';
+  $('fColor').dispatchEvent(new Event('input'));
+  var colApply = fAc.color === '#ab34cd' && curColor === '#ab34cd';
+  fAc.color = '#8d6e63'; curColor = '#8d6e63';
+  $('fColor').value = curColor; $('fColorHex').textContent = curColor;
+  setSel(null);
+  ck('物件顏色調色盤即時套用', colSync && colApply, '(同步=' + colSync + ', 套用=' + colApply + ')');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
+  if (st === 'wood') $('btnThemeWood').click();
   if (st === 'grid') $('btnGrid').click();
   if (st === '3d') { setMode(true); cam.rz = 25; cam.rx = 60; applyCam(); }
   if (st === 'panel') { panel.classList.add('open'); $('btnPanel').classList.add('active'); }   // 面板已預設開啟
