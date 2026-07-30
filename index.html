@@ -198,8 +198,9 @@
   #cabSide h2 { font-size: 15px; color: #fff; margin-bottom: 6px; }
   #cabSide h3 { font-size: 12.5px; color: #9ab; margin: 10px 0 4px; border-top: 1px solid #3a3a44; padding-top: 8px; }
   #cabSide label { display: block; font-size: 12px; color: #aaa; margin: 6px 0 2px; }
-  #cabSide input { width: 100%; background: #15151a; color: #eee; border: 1px solid #4a4a55;
+  #cabSide input, #cabSide select { width: 100%; background: #15151a; color: #eee; border: 1px solid #4a4a55;
                    border-radius: 4px; padding: 5px 6px; font-size: 13px; font-family: inherit; }
+  #cabShellWrap button.off { background: #4a2828; color: #f2a0a0; text-decoration: line-through; }
   #cabInfo { color: #8fd0a8; font-size: 12.5px; margin-top: 6px; line-height: 1.5; }
   #cabDist { color: #35d9a2; font-size: 12.5px; margin-top: 4px; line-height: 1.6; white-space: pre-line; }
   #cabDist.bad { color: #ff5252; }
@@ -276,7 +277,7 @@
         <div id="boxHost"></div>
         <div id="vgHost"></div>
       </div></div>
-      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳平移、Shift+點選多選（R 群組旋轉）｜懸浮顯示四向＋垂直距離｜拖近物件磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Ctrl+C/V 複製貼上</div>
+      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳（或左+右鍵同按、右鍵拖曳）平移、Shift+點選多選（R 群組旋轉）｜懸浮顯示四向＋垂直距離｜拖近物件磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜方向鍵微調 0.5cm｜Ctrl+C/V 複製貼上</div>
     </div>
     <div id="panel" class="open">
       <h3 id="panelTitle">新增物件（家具／家電…）</h3>
@@ -359,6 +360,17 @@
           <button id="cabAddItem">📦 放置物品</button>
           <button id="cabEven">平均分配</button>
         </div>
+        <label>放置物品種類（可選內建物件）</label>
+        <select id="cabAddKind"><option value="">自訂物品</option></select>
+        <div id="cabShellWrap">
+          <label>殼板（點擊刪除／恢復；刪底板＝直接地板，可模擬檯面下擺放）</label>
+          <div class="btnrow">
+            <button id="cabShellB" data-sk="noBottom">底板</button>
+            <button id="cabShellT" data-sk="noTop">頂板</button>
+            <button id="cabShellL" data-sk="noLeft">左板</button>
+            <button id="cabShellR" data-sk="noRight">右板</button>
+          </div>
+        </div>
         <div id="cabPartEdit" style="display:none">
           <h3>隔板編輯（點選中的隔板）</h3>
           <label>厚度（cm，0.4~3）</label>
@@ -383,9 +395,10 @@
           <div class="btnrow"><button id="cabDelItem">🗑 移除物品</button></div>
         </div>
         <div id="cabList"></div>
-        <div class="note">殼厚 2cm、正面開放。新增隔板自動延伸至內徑邊緣並平均分配（由中間起算、不貼邊）；
-          拖曳隔板沿軸調整間隔。物品可左右拖曳、上下拖到隔板上（自動落在支撐面），
-          面板即時顯示與櫃內徑／隔板的距離，放不下會變紅。</div>
+        <div class="note">殼厚 2cm、正面開放；底／頂／左／右殼板可個別刪除（刪底板＝直接地板，可模擬檯面下）。
+          桌子等具外皮物件保留原外皮與原結構（如桌下即內部空間）。新增隔板自動延伸至內徑邊緣並平均分配
+          （由中間起算、不貼邊）；拖曳隔板沿軸調整間隔。物品（含內建物件）可左右拖曳、上下拖到隔板上
+          （自動落在支撐面），面板即時顯示六向距離，放不下會變紅。</div>
         <div class="foot" style="display:flex;justify-content:flex-end;margin-top:10px">
           <button id="cabClose">完成</button>
         </div>
@@ -400,9 +413,9 @@
     <div id="tutBox">
       <h2>🏠 快速上手</h2>
       <div>本頁由建商 CAD 原圖（日安TOKYO・A2戶型）精確轉換，<b>所有尺寸與圖面一致</b>（單位 cm），量測結果可直接用於施工溝通。</div>
-      <div class="step"><b>① 檢視</b><span>滾輪縮放、拖曳平移；「3D 檢視」拖曳旋轉視角、Shift+拖曳平移。</span></div>
+      <div class="step"><b>① 檢視</b><span>滾輪縮放、拖曳平移；「3D 檢視」拖曳旋轉視角、Shift+拖曳平移；2D/3D 皆可<b>左+右鍵同時按住拖曳</b>＝固定角度平移整張平面圖。</span></div>
       <div class="step"><b>② 量測</b><span>游標懸浮即顯示四向距離（含與物件的距離）；3D 檢視（非正俯瞰）另顯示垂直方向上下兩點距離；「📏 量測」點兩點精準量距，自動吸附圖面節點。</span></div>
-      <div class="step"><b>③ 物件</b><span>「🛋 物件」輸入長寬高（名稱可留空、顏色用調色盤）新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；物件任一臨邊有支點（地板／物件／天花板／牆面＝可釘固定）即可停留；Shift+點選可多選（R 群組旋轉）、Ctrl+C/V 複製、Delete 刪除。</span></div>
+      <div class="step"><b>③ 物件</b><span>「🛋 物件」輸入長寬高（名稱可留空、顏色用調色盤）新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；物件任一臨邊有支點（地板／物件／天花板／牆面＝可釘固定）即可停留；Shift+點選可多選（R 群組旋轉）、Ctrl+C/V 複製、Delete 刪除、<b>方向鍵微調 0.5cm</b>（可突破磁吸、仍不可覆蓋牆）；選取後「🗄 櫃體」可編輯隔板／刪殼板／放置物品（含內建物件）。</span></div>
       <div class="step"><b>④ 儲存/分享</b><span>配置隨時自動儲存在你的瀏覽器，下次開啟（含重開機）自動接續；「💾 版本」可另存多個方案並隨時還原；「匯出/匯入」JSON 檔可備份或跨裝置分享。</span></div>
       <div class="note">匯入 CAD：本頁已內建 A2 戶型圖面；更換其他戶型／建案需以隨附 tools 轉檔管線重新產生頁面（DWG→DXF→HTML），一般使用者無需操作，未來將支援直接上傳 CAD 檔。</div>
       <div class="foot">
@@ -653,9 +666,28 @@ function shade(hex, k) {   // 顏色亮度調整（3D 外觀部件用）
 }
 /* ---- 櫃體（cab）：殼厚固定 2cm、正面開放。parts=隔板{dir:'h'|'v',pos,t}、items=櫃內物品 ---- */
 var CAB_TS = 2;
-function hasCab(f) { return !!(f && f.cab && (f.cab.parts.length || f.cab.items.length)); }
-function cabInner(f) {   // 內徑：寬 iw、高 ih、深 idp（背板 2cm、前開放）
-  return { iw: Math.max(0, f.w - 2 * CAB_TS), ih: Math.max(0, f.h - 2 * CAB_TS), idp: Math.max(0, f.d - CAB_TS) };
+function hasCab(f) {
+  return !!(f && f.cab && (f.cab.parts.length || f.cab.items.length ||
+            f.cab.noBottom || f.cab.noTop || f.cab.noLeft || f.cab.noRight));
+}
+// 內部空間：寬 iw、高 ih、深 idp；x0/z0/y0＝內左緣/內底/內前緣相對物件的偏移。
+// 具外皮物件（SKIN_INNER 定義者，如桌子）→ 以原物件屬性為主（保留外皮、桌下即內部空間）；
+// 其他＝空心殼（背板 2cm、前開放），底/頂/左/右殼板可個別移除（noBottom＝內底=地板，模擬檯面下）
+function cabInner(f) {
+  if (f && f.skin && typeof SKIN_INNER !== 'undefined' && SKIN_INNER[f.skin]) {
+    var s = SKIN_INNER[f.skin](f);
+    s.skin = true;
+    return s;
+  }
+  var c = (f && f.cab) || {};
+  var z0 = c.noBottom ? 0 : CAB_TS;
+  var x0 = c.noLeft ? 0 : CAB_TS;
+  return {
+    iw: Math.max(0, f.w - x0 - (c.noRight ? 0 : CAB_TS)),
+    ih: Math.max(0, f.h - z0 - (c.noTop ? 0 : CAB_TS)),
+    idp: Math.max(0, f.d - CAB_TS),
+    z0: z0, x0: x0, y0: 0
+  };
 }
 function cabPartsDir(f, dir) {
   return f.cab.parts.filter(function (p) { return p.dir === dir; }).sort(function (a, b) { return a.pos - b.pos; });
@@ -722,18 +754,23 @@ function cabItemDists(f, it) {
   cabPartsDir(f, 'h').forEach(function (p) {
     if (p.pos - p.t / 2 >= z1 - 0.01) up = Math.min(up, (p.pos - p.t / 2) - z1);
   });
-  f.cab.items.forEach(function (o) {   // 其他物品也是鄰近點
+  var front = it.y - it.d / 2, back = inn.idp - (it.y + it.d / 2);   // 前＝開口側、後＝背板
+  f.cab.items.forEach(function (o) {   // 其他物品也是鄰近點（左右前後上）
     if (o.id === it.id) return;
     var yov = Math.abs(o.y - it.y) < (o.d + it.d) / 2 - 0.01;
+    var xov = Math.abs(o.x - it.x) < (o.w + it.w) / 2 - 0.01;
     var zov = o.z < z1 - 0.01 && z0 < o.z + o.h - 0.01;
     if (yov && zov) {
       if (o.x + o.w / 2 <= x0 + 0.01) left = Math.min(left, x0 - (o.x + o.w / 2));
       if (o.x - o.w / 2 >= x1 - 0.01) right = Math.min(right, (o.x - o.w / 2) - x1);
     }
-    if (yov && Math.abs(o.x - it.x) < (o.w + it.w) / 2 - 0.01 && o.z >= z1 - 0.01) up = Math.min(up, o.z - z1);
+    if (xov && zov) {
+      if (o.y + o.d / 2 <= it.y - it.d / 2 + 0.01) front = Math.min(front, (it.y - it.d / 2) - (o.y + o.d / 2));
+      if (o.y - o.d / 2 >= it.y + it.d / 2 - 0.01) back = Math.min(back, (o.y - o.d / 2) - (it.y + it.d / 2));
+    }
+    if (yov && xov && o.z >= z1 - 0.01) up = Math.min(up, o.z - z1);
   });
-  var back = inn.idp - (it.y + it.d / 2);
-  return { left: left, right: right, up: up, back: back };
+  return { left: left, right: right, up: up, front: front, back: back };
 }
 function cabItemBad(f, it) {   // 超出內徑或與隔板重疊 → 放不下
   var inn = cabInner(f);
@@ -902,10 +939,18 @@ function furnEdgeSegs(skipId, zlo, zhi) {
 }
 function rayObstacle(p, dx, dy, segs) { return Math.min(rayWall(p, dx, dy), raySegs(p, dx, dy, segs)); }
 function gpx(u) { return mode3d ? u / Math.max(0.05, cam.s) : px(u); }
-// 主視圖 3D 懸停櫃體：物品→與內徑/隔板/其他物品距離標籤；櫃體本體→內徑標示（滑鼠到哪距離到哪）
+// 具外皮物件進櫃體介面：保留原外皮與原結構屬性（桌下/椅下/推車層間/洗衣籃內＝其真實內部空間）
+var SKIN_INNER = {
+  table: function (f) { var t = Math.max(3, Math.min(5, f.h * 0.08)); return { x0: 0, z0: 0, y0: 0, iw: f.w, ih: Math.max(0, f.h - t), idp: f.d }; },
+  chair: function (f) { return { x0: 0, z0: 0, y0: 0, iw: f.w, ih: Math.max(0, f.h * 0.55 - 4), idp: f.d }; },
+  cart: function (f) { return { x0: 0, z0: 7, y0: 0, iw: f.w, ih: Math.max(0, f.h - 9), idp: f.d }; },
+  laundry: function (f) { return { x0: 2, z0: 2, y0: 2, iw: Math.max(0, f.w - 4), ih: Math.max(0, f.h - 2), idp: Math.max(0, f.d - 4) }; }
+};
+// 主視圖 3D 懸停櫃體：物品→六向距離標籤（與 Modal 統一）；櫃體本體→內部空間標示（滑鼠到哪距離到哪）
 function updateCabGuides(f, ci) {
   if (!mode3d || !f || !hasCab(f)) return;
-  var inn = cabInner(f), TS = CAB_TS;
+  var inn = cabInner(f);
+  var ix = -f.w / 2 + inn.x0;
   var ar = f.rot * Math.PI / 180, ca = Math.cos(ar), sa = Math.sin(ar);
   function lbl(lx, ly, z, text) {
     var wx = f.x + lx * ca - ly * sa, wy = f.y + lx * sa + ly * ca;
@@ -920,14 +965,15 @@ function updateCabGuides(f, ci) {
   }
   if (ci != null && f.cab.items[ci]) {
     var it = f.cab.items[ci], dd = cabItemDists(f, it);
-    var lx0 = -inn.iw / 2 + it.x, ly0 = f.d / 2 - it.y;
-    var zm = f.z + TS + it.z + it.h / 2;
+    var lx0 = ix + it.x, ly0 = f.d / 2 - inn.y0 - it.y;
+    var zb = f.z + inn.z0 + it.z, zm = zb + it.h / 2;
     if (dd.left > 0.05) lbl(lx0 - it.w / 2 - dd.left / 2, ly0, zm, '← ' + r1(dd.left));
     if (dd.right > 0.05) lbl(lx0 + it.w / 2 + dd.right / 2, ly0, zm, r1(dd.right) + ' →');
-    if (dd.up > 0.05) lbl(lx0, ly0, f.z + TS + it.z + it.h + dd.up / 2, '↕ ' + r1(dd.up));
-    if (dd.back > 0.05) lbl(lx0, ly0, f.z + TS + it.z + it.h + Math.max(0, dd.up) + 8, '深餘 ' + r1(dd.back));
+    if (dd.up > 0.05) lbl(lx0, ly0, zb + it.h + dd.up / 2, '↕ ' + r1(dd.up));
+    if (dd.front > 0.05) lbl(lx0, ly0 + it.d / 2 + dd.front / 2, zm, '前 ' + r1(dd.front));
+    if (dd.back > 0.05) lbl(lx0, ly0 - it.d / 2 - dd.back / 2, zm, '後 ' + r1(dd.back));
   } else {
-    lbl(0, 0, f.z + f.h - TS, '內徑 ' + r1(inn.iw) + '×' + r1(inn.idp) + '×' + r1(inn.ih));
+    lbl(ix + inn.iw / 2, 0, f.z + inn.z0 + inn.ih, '內部 ' + r1(inn.iw) + '×' + r1(inn.idp) + '×' + r1(inn.ih));
   }
   updateBillboards();
 }
@@ -1249,13 +1295,13 @@ function redrawFurniture2d() {
       el('circle', { cx: 0, cy: 0, r: Math.max(6, Math.min(11, f.d / 2 - 2)), fill: 'rgba(255,255,255,.3)',
                      'class': 'furn-rect', 'stroke-width': 1 }, g);
     }
-    if (hasCab(f)) {   // 櫃體：內徑虛線框＋垂直隔板（俯視可見；開口＝+y）
-      var inn2 = cabInner(f);
-      el('rect', { x: -inn2.iw / 2, y: -f.d / 2 + 2, width: inn2.iw, height: inn2.idp, fill: 'none',
+    if (hasCab(f)) {   // 櫃體：內部空間虛線框＋垂直隔板（俯視可見；開口＝+y）
+      var inn2 = cabInner(f), ix2d = -f.w / 2 + inn2.x0, iy2d = -f.d / 2 + (f.d - inn2.y0 - inn2.idp);
+      el('rect', { x: ix2d, y: iy2d, width: inn2.iw, height: inn2.idp, fill: 'none',
                    'class': 'furn-rect', 'stroke-width': 0.8, 'stroke-dasharray': '4 3' }, g);
       f.cab.parts.forEach(function (p) {
         if (p.dir !== 'v') return;
-        el('rect', { x: -inn2.iw / 2 + p.pos - p.t / 2, y: -f.d / 2 + 2, width: p.t, height: inn2.idp,
+        el('rect', { x: ix2d + p.pos - p.t / 2, y: iy2d, width: p.t, height: inn2.idp,
                      fill: f.color, 'fill-opacity': 0.9, 'class': 'furn-rect', 'stroke-width': 0.8 }, g);
       });
     }
@@ -1435,7 +1481,7 @@ var BUILTINS = [
   { k: 'board',     name: '隔板',       w: 60,  d: 30,  h: 2,   color: '#d7b98e', emoji: '➖' },
   { k: 'bed',       name: '床',         w: 190, d: 188, h: 40,  color: '#8d6e63', emoji: '🛏' },
   { k: 'sofa',      name: '沙發',       w: 200, d: 150, h: 60,  color: '#607d8b', emoji: '🛋' },
-  { k: 'shoe',      name: '鞋櫃',       w: 100, d: 37,  h: 240, color: '#a1887f', emoji: '👞' },
+  { k: 'shoe',      name: '鞋櫃',       w: 64,  d: 32,  h: 200, color: '#a1887f', emoji: '👞' },
   { k: 'wardrobe',  name: '衣櫃',       w: 250, d: 60,  h: 240, color: '#8d6e63', emoji: '👕' },
   { k: 'luggage',   name: '行李箱',     w: 50,  d: 32,  h: 75,  color: '#3d6ea5', emoji: '🧳' },
   { k: 'carryon',   name: '登機箱',     w: 40,  d: 23,  h: 56,  color: '#4e7a51', emoji: '🧳' },
@@ -1921,6 +1967,7 @@ stage.addEventListener('pointerdown', function (e) {
     return;
   }
   if (measuring) return;
+  if (e.button === 2) { stage.classList.add('dragging'); return; }   // 右鍵不啟動家具拖曳（單獨=平移；加左鍵=雙鍵平移）
   var tgt = e.target;
   if (tgt.getAttribute && tgt.getAttribute('data-rot')) {
     var f0 = furniture.find(function (x) { return x.id === +tgt.getAttribute('data-rot'); });
@@ -1970,6 +2017,14 @@ stage.addEventListener('pointermove', function (e) {
   if (pointers.size === 1) {
     var dx = e.clientX - prev.x, dy = e.clientY - prev.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+    if ((e.buttons & 1) && (e.buttons & 2)) {   // 左+右鍵同時＝平移平面圖（家具拖曳/旋轉即刻取消退回）
+      abortActiveDrag();
+      moved = true;
+      var sp = scale2d();
+      vb.x -= dx / sp; vb.y -= dy / sp;
+      apply();
+      return;
+    }
     if (rotF) {
       var pr = clientToPlan(e.clientX, e.clientY);
       var ang = Math.atan2(pr.y - rotF.y, pr.x - rotF.x) * 180 / Math.PI;
@@ -2005,6 +2060,20 @@ stage.addEventListener('pointermove', function (e) {
     pinchD = d;
   }
 });
+// 左鍵+右鍵同時按住＝平移平面圖（2D/3D 軸心與角度不變）：取消進行中的家具拖曳/旋轉並退回原位
+function abortActiveDrag() {
+  if (dragF || drag3F) {
+    var f0 = dragF || drag3F;
+    clearLifts();
+    if (dragStart) { f0.x = dragStart.x; f0.y = dragStart.y; f0.z = dragStart.z; f0.rot = dragStart.rot; }
+    dragCarry.forEach(function (c) { c.o.x = c.sx; c.o.y = c.sy; c.o.z = c.sz; });
+    dragCarry = []; dragF = null; drag3F = null;
+    stackCtx.key = ''; stackCtx.mode = 'free'; stackCtx.memb = {};
+    redrawFurniture2d(); rebuildBoxes();
+  }
+  if (rotF) { if (dragStart) rotF.rot = dragStart.rot; rotF = null; rotSnapped = false; redrawFurniture2d(); rebuildBoxes(); }
+  dragStart = null; lastGood = null;
+}
 function settleMoved(f) {
   var reason = null;
   var group = [f];
@@ -2054,6 +2123,7 @@ stage.addEventListener('pointercancel', function (e) {
   dragF = null; rotF = null; stage.classList.remove('dragging');
 });
 stage.addEventListener('pointerleave', function () { if (pointers.size === 0) { hideGuides(); showSnap(null); } });
+stage.addEventListener('contextmenu', function (e) { e.preventDefault(); });   // 右鍵用於平移，不開選單
 
 /* ============ measure mode ============ */
 var btnM = $('btnMeasure');
@@ -2245,22 +2315,38 @@ function rebuildBoxes() {
       addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', -(torsoW / 2 + armW / 2));    // 左臂
       addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', (torsoW / 2 + armW / 2));     // 右臂
       addBox(headW, Math.min(22, d), headH, z0 + legH + torsoH, topCls);                           // 頭
-    } else if (hasCab(f)) {   // 櫃體：空心殼（正面＝+y 開放）＋隔板＋櫃內物品
+    } else if (hasCab(f)) {   // 櫃體：具外皮者保留原外皮（原物件屬性為主）；其他＝空心殼（正面＝+y 開放；殼板可個別移除）
       var inn = cabInner(f), TS = CAB_TS;
-      addBox(w, d, TS, z0, '');                                    // 底板
-      addBox(w, d, TS, z0 + h - TS, topCls);                       // 頂板
-      addBox(TS, d, h - 2 * TS, z0 + TS, '', -(w - TS) / 2);       // 左側板
-      addBox(TS, d, h - 2 * TS, z0 + TS, '', (w - TS) / 2);        // 右側板
-      addBox(w - 2 * TS, TS, h - 2 * TS, z0 + TS, '', 0, -(d - TS) / 2);   // 背板（-y）
+      var ix = -w / 2 + inn.x0;                                    // 內左緣（local x）
+      var shelfCy = d / 2 - inn.y0 - inn.idp / 2;                  // 隔板深度中心
+      if (inn.skin) {
+        SKIN3D[f.skin](f, addBox, topCls);                         // 保留原外皮（如桌子＝桌板+桌腳，桌下即內部空間）
+      } else {
+        var topT = f.cab.noTop ? 0 : TS;
+        var shellH = h - inn.z0 - topT;
+        if (!f.cab.noBottom) addBox(w, d, TS, z0, f.cab.noTop ? topCls : '');
+        if (!f.cab.noTop) addBox(w, d, TS, z0 + h - TS, topCls);
+        if (!f.cab.noLeft) addBox(TS, d, shellH, z0 + inn.z0, '', -(w - TS) / 2);
+        if (!f.cab.noRight) addBox(TS, d, shellH, z0 + inn.z0, '', (w - TS) / 2);
+        addBox(inn.iw, TS, shellH, z0 + inn.z0, '', ix + inn.iw / 2, -(d - TS) / 2);   // 背板（-y）
+      }
       f.cab.parts.forEach(function (p) {
         var pcol = cabPartBad(f, p) ? '#d32f2f' : shade(f.color, 1.14);
-        if (p.dir === 'h') addBox(inn.iw, inn.idp, p.t, z0 + TS + p.pos - p.t / 2, '', 0, TS / 2, pcol);
-        else addBox(p.t, inn.idp, inn.ih, z0 + TS, '', -inn.iw / 2 + p.pos, TS / 2, pcol);
+        if (p.dir === 'h') addBox(inn.iw, inn.idp, p.t, z0 + inn.z0 + p.pos - p.t / 2, '', ix + inn.iw / 2, shelfCy, pcol);
+        else addBox(p.t, inn.idp, inn.ih, z0 + inn.z0, '', ix + p.pos, shelfCy, pcol);
       });
       f.cab.items.forEach(function (it, ii2) {
         var n0 = b.children.length;
-        addBox(it.w, it.d, it.h, z0 + TS + it.z, '', -inn.iw / 2 + it.x, d / 2 - it.y,
-               cabItemBad(f, it) ? '#d32f2f' : it.color || '#c9a227');
+        var bad2 = cabItemBad(f, it);
+        var icx = ix + it.x, icy = d / 2 - inn.y0 - it.y, iz = z0 + inn.z0 + it.z;
+        if (!bad2 && it.skin && SKIN3D[it.skin]) {   // 內建物件放入櫃內：以外皮呈現
+          SKIN3D[it.skin]({ w: it.w, d: it.d, h: it.h, z: iz, color: it.color || '#c9a227' },
+            function (bw, bd, bh, bz, cls2, cx2, cy2, col2) {
+              addBox(bw, bd, bh, bz, '', (cx2 || 0) + icx, (cy2 || 0) + icy, col2 || it.color || '#c9a227');
+            }, '');
+        } else {
+          addBox(it.w, it.d, it.h, iz, '', icx, icy, bad2 ? '#d32f2f' : it.color || '#c9a227');
+        }
         for (var q2 = n0; q2 < b.children.length; q2++) b.children[q2].setAttribute('data-ci', ii2);   // 供 3D 懸停辨識物品
       });
     } else if (f.skin && SKIN3D[f.skin]) {   // 內建物件外觀（本質仍是長寬高箱體）
@@ -2347,6 +2433,7 @@ scene3d.addEventListener('pointerdown', function (e) {
     pinch3 = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
     return;
   }
+  if (e.button === 2) { scene3d.classList.add('dragging'); return; }   // 右鍵不啟動家具拖曳（單獨=平移；加左鍵=雙鍵平移）
   var bx = e.target.closest ? e.target.closest('[data-bid]') : null;
   if (bx) {
     var f = furniture.find(function (x) { return x.id === +bx.getAttribute('data-bid'); });
@@ -2390,6 +2477,14 @@ scene3d.addEventListener('pointermove', function (e) {
     var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
     if (pinch3 > 0 && d > 0) { cam.s *= d / pinch3; cam.s = Math.max(0.05, Math.min(5, cam.s)); }
     pinch3 = d;
+    applyCam();
+    return;
+  }
+  if ((e.buttons & 1) && (e.buttons & 2)) {   // 左+右鍵同時＝平移（視角軸心/角度不變；家具拖曳即刻取消退回）
+    abortActiveDrag();
+    moved3 = true;
+    cam.px += dx; cam.py += dy;
+    hideGuides();
     applyCam();
     return;
   }
@@ -2477,13 +2572,15 @@ function openCab(f) {
   cabF = f; cabSelP = -1; cabSelI = -1;
   $('cabTitle').textContent = f.name || '（未命名）';
   $('cabDefT').value = f.cab.t;
+  $('cabShellWrap').style.display = (f.skin && SKIN_INNER[f.skin]) ? 'none' : '';   // 具外皮物件無殼板
+  syncShellBtns();
   cabModal.classList.add('show');
   fitCabCam();
   renderCab(); syncCabPanel();
 }
 function closeCab() {
   cabModal.classList.remove('show');
-  if (cabF && !cabF.cab.parts.length && !cabF.cab.items.length) delete cabF.cab;   // 無內容→維持實心
+  if (cabF && !hasCab(cabF)) delete cabF.cab;   // 無內容（含未刪任何殼板）→維持實心
   cabF = null;
   refreshAll();
 }
@@ -2560,10 +2657,11 @@ function cabPlaneFromScreen(sx, sy) {
   }
   return { x: x, z: z };
 }
-// 櫃內任意點（距內左 lx、距內底 lz）四向鄰近距離：內壁/隔板/物品——懸停鄰近點規則
+// 櫃內任意點（距內左 lx、距內底 lz，深度取中線）六向鄰近距離：內壁/隔板/物品——懸停鄰近點規則（與主視圖統一）
 function cabPointDists(f, lx, lz) {
   var inn = cabInner(f);
   var up = inn.ih - lz, down = lz, left = lx, right = inn.iw - lx;
+  var ymid = inn.idp / 2, front = ymid, back = inn.idp - ymid;   // 前＝開口、後＝背板
   cabPartsDir(f, 'h').forEach(function (p) {
     if (p.pos - p.t / 2 >= lz) up = Math.min(up, p.pos - p.t / 2 - lz);
     if (p.pos + p.t / 2 <= lz) down = Math.min(down, lz - (p.pos + p.t / 2));
@@ -2582,48 +2680,60 @@ function cabPointDists(f, lx, lz) {
       if (o.z >= lz) up = Math.min(up, o.z - lz);
       if (o.z + o.h <= lz) down = Math.min(down, lz - (o.z + o.h));
     }
+    if (xin && zin) {   // 深度方向（前後）
+      if (o.y + o.d / 2 <= ymid) front = Math.min(front, ymid - (o.y + o.d / 2));
+      if (o.y - o.d / 2 >= ymid) back = Math.min(back, (o.y - o.d / 2) - ymid);
+    }
   });
-  return { up: up, down: down, left: left, right: right };
+  return { up: up, down: down, left: left, right: right, front: front, back: back, ymid: ymid };
 }
 function clearCabHover() {
   cabWorld.querySelectorAll('[data-hov]').forEach(function (n) { n.remove(); });
 }
-function showCabHover(lx, lz) {   // 懸停空白：綠色四向線＋距離
+function showCabHover(lx, lz) {   // 懸停空白：綠色六向線＋距離（樣式/規則與主視圖統一）
   clearCabHover();
   if (!cabF) return;
-  var f = cabF, inn = cabInner(f), TS = CAB_TS, zo = -f.h / 2;
+  var f = cabF, inn = cabInner(f), zo = -f.h / 2;
   var dd = cabPointDists(f, lx, lz);
-  var cx = -inn.iw / 2 + lx, z = zo + TS + lz;
+  var cx = -f.w / 2 + inn.x0 + lx, z = zo + inn.z0 + lz;
+  var ly = f.d / 2 - inn.y0 - dd.ymid;   // 深度取中線
   function mk(n) { n.setAttribute('data-hov', '1'); return n; }
-  if (dd.left > 0.05) mk(cabBoxInto(dd.left, 0.7, 0.7, cx - dd.left / 2, 0, z - 0.35, '#21c08b'));
-  if (dd.right > 0.05) mk(cabBoxInto(dd.right, 0.7, 0.7, cx + dd.right / 2, 0, z - 0.35, '#21c08b'));
-  if (dd.up > 0.05) mk(cabBoxInto(0.7, 0.7, dd.up, cx, 0, z, '#21c08b'));
-  if (dd.down > 0.05) mk(cabBoxInto(0.7, 0.7, dd.down, cx, 0, z - dd.down, '#21c08b'));
-  mk(cabLblInto(cx - dd.left / 2, 0, z, r1(dd.left) + ''));
-  mk(cabLblInto(cx + dd.right / 2, 0, z, r1(dd.right) + ''));
-  mk(cabLblInto(cx, 0, z + dd.up / 2, '↕ ' + r1(dd.up)));
-  if (dd.down > 0.05) mk(cabLblInto(cx, 0, z - dd.down / 2, '↕ ' + r1(dd.down)));
+  if (dd.left > 0.05) mk(cabBoxInto(dd.left, 0.7, 0.7, cx - dd.left / 2, ly, z - 0.35, '#21c08b'));
+  if (dd.right > 0.05) mk(cabBoxInto(dd.right, 0.7, 0.7, cx + dd.right / 2, ly, z - 0.35, '#21c08b'));
+  if (dd.up > 0.05) mk(cabBoxInto(0.7, 0.7, dd.up, cx, ly, z, '#21c08b'));
+  if (dd.down > 0.05) mk(cabBoxInto(0.7, 0.7, dd.down, cx, ly, z - dd.down, '#21c08b'));
+  if (dd.front > 0.05) mk(cabBoxInto(0.7, dd.front, 0.7, cx, ly + dd.front / 2, z - 0.35, '#21c08b'));
+  if (dd.back > 0.05) mk(cabBoxInto(0.7, dd.back, 0.7, cx, ly - dd.back / 2, z - 0.35, '#21c08b'));
+  mk(cabLblInto(cx - dd.left / 2, ly, z, r1(dd.left) + ''));
+  mk(cabLblInto(cx + dd.right / 2, ly, z, r1(dd.right) + ''));
+  mk(cabLblInto(cx, ly, z + dd.up / 2, '↕ ' + r1(dd.up)));
+  if (dd.down > 0.05) mk(cabLblInto(cx, ly, z - dd.down / 2, '↕ ' + r1(dd.down)));
+  if (dd.front > 0.05) mk(cabLblInto(cx, ly + dd.front / 2, z + 4, '前 ' + r1(dd.front)));
+  if (dd.back > 0.05) mk(cabLblInto(cx, ly - dd.back / 2, z + 4, '後 ' + r1(dd.back)));
   applyCabCam();
 }
-function showCabItemHover(i) {   // 懸停物品：與內徑/隔板/其他物品距離
+function showCabItemHover(i) {   // 懸停放置物品：六向鄰近距離（內壁/隔板/其他物品）
   clearCabHover();
   var f = cabF, it = f && f.cab.items[i];
   if (!it) return;
-  var inn = cabInner(f), TS = CAB_TS, zo = -f.h / 2;
+  var inn = cabInner(f), zo = -f.h / 2;
   var dd = cabItemDists(f, it);
-  var lx0 = -inn.iw / 2 + it.x, ly0 = f.d / 2 - it.y, zm = zo + TS + it.z + it.h / 2;
+  var lx0 = -f.w / 2 + inn.x0 + it.x, ly0 = f.d / 2 - inn.y0 - it.y;
+  var zb = zo + inn.z0 + it.z, zm = zb + it.h / 2;
   function mk(n) { n.setAttribute('data-hov', '1'); return n; }
   if (dd.left > 0.05) mk(cabLblInto(lx0 - it.w / 2 - dd.left / 2, ly0, zm, '← ' + r1(dd.left)));
   if (dd.right > 0.05) mk(cabLblInto(lx0 + it.w / 2 + dd.right / 2, ly0, zm, r1(dd.right) + ' →'));
-  if (dd.up > 0.05) mk(cabLblInto(lx0, ly0, zo + TS + it.z + it.h + dd.up / 2, '↕ ' + r1(dd.up)));
-  mk(cabLblInto(lx0, ly0, zo + TS + it.z + it.h + Math.max(0, dd.up) + 6, '深餘 ' + r1(dd.back)));
+  if (dd.up > 0.05) mk(cabLblInto(lx0, ly0, zb + it.h + dd.up / 2, '↕ ' + r1(dd.up)));
+  if (dd.front > 0.05) mk(cabLblInto(lx0, ly0 + it.d / 2 + dd.front / 2, zm, '前 ' + r1(dd.front)));
+  if (dd.back > 0.05) mk(cabLblInto(lx0, ly0 - it.d / 2 - dd.back / 2, zm, '後 ' + r1(dd.back)));
   applyCabCam();
 }
 function showCabPartHover(i) {   // 懸停隔板：與相鄰隔板/內壁的兩側間距
   clearCabHover();
   var f = cabF, p = f && f.cab.parts[i];
   if (!p) return;
-  var inn = cabInner(f), TS = CAB_TS, zo = -f.h / 2;
+  var inn = cabInner(f), zo = -f.h / 2;
+  var ix2 = -f.w / 2 + inn.x0;
   var span = p.dir === 'h' ? inn.ih : inn.iw;
   var lo = 0, hi = span;
   cabPartsDir(f, p.dir).forEach(function (q) {
@@ -2634,11 +2744,11 @@ function showCabPartHover(i) {   // 懸停隔板：與相鄰隔板/內壁的兩�
   var below = p.pos - p.t / 2 - lo, above = hi - (p.pos + p.t / 2);
   function mk(n) { n.setAttribute('data-hov', '1'); return n; }
   if (p.dir === 'h') {
-    var zc = zo + TS + p.pos;
-    mk(cabLblInto(0, 0, zc + p.t / 2 + above / 2, '↕ ' + r1(above)));
-    mk(cabLblInto(0, 0, zc - p.t / 2 - below / 2, '↕ ' + r1(below)));
+    var zc = zo + inn.z0 + p.pos, xcc = ix2 + inn.iw / 2;
+    mk(cabLblInto(xcc, 0, zc + p.t / 2 + above / 2, '↕ ' + r1(above)));
+    mk(cabLblInto(xcc, 0, zc - p.t / 2 - below / 2, '↕ ' + r1(below)));
   } else {
-    var xc = -inn.iw / 2 + p.pos, zm2 = zo + TS + inn.ih / 2;
+    var xc = ix2 + p.pos, zm2 = zo + inn.z0 + inn.ih / 2;
     mk(cabLblInto(xc + p.t / 2 + above / 2, 0, zm2, r1(above) + ' →'));
     mk(cabLblInto(xc - p.t / 2 - below / 2, 0, zm2, '← ' + r1(below)));
   }
@@ -2648,30 +2758,51 @@ function renderCab() {
   cabWorld.innerHTML = '';
   if (!cabF) return;
   var f = cabF, inn = cabInner(f), TS = CAB_TS, zo = -f.h / 2;
-  cabBoxInto(f.w, f.d, TS, 0, 0, zo, f.color);
-  cabBoxInto(f.w, f.d, TS, 0, 0, zo + f.h - TS, f.color);
-  cabBoxInto(TS, f.d, f.h - 2 * TS, -(f.w - TS) / 2, 0, zo + TS, f.color);
-  cabBoxInto(TS, f.d, f.h - 2 * TS, (f.w - TS) / 2, 0, zo + TS, f.color);
-  cabBoxInto(f.w - 2 * TS, TS, f.h - 2 * TS, 0, -(f.d - TS) / 2, zo + TS, shade(f.color, 0.85));   // 背板（-y）；開口＝+y 朝鏡頭
+  var ix = -f.w / 2 + inn.x0;
+  var shelfCy = f.d / 2 - inn.y0 - inn.idp / 2;
+  if (inn.skin) {   // 具外皮物件：保留原外皮（如桌子），不轉為空心殼
+    SKIN3D[f.skin]({ w: f.w, d: f.d, h: f.h, z: zo, color: f.color },
+      function (bw, bd, bh, bz, cls2, cx2, cy2, col2) {
+        cabBoxInto(bw, bd, bh, cx2 || 0, cy2 || 0, bz, col2 || f.color);
+      }, '');
+  } else {
+    var topT = f.cab.noTop ? 0 : TS;
+    var shellH = f.h - inn.z0 - topT;
+    if (!f.cab.noBottom) cabBoxInto(f.w, f.d, TS, 0, 0, zo, f.color);
+    if (!f.cab.noTop) cabBoxInto(f.w, f.d, TS, 0, 0, zo + f.h - TS, f.color);
+    if (!f.cab.noLeft) cabBoxInto(TS, f.d, shellH, -(f.w - TS) / 2, 0, zo + inn.z0, f.color);
+    if (!f.cab.noRight) cabBoxInto(TS, f.d, shellH, (f.w - TS) / 2, 0, zo + inn.z0, f.color);
+    cabBoxInto(inn.iw, TS, shellH, ix + inn.iw / 2, -(f.d - TS) / 2, zo + inn.z0, shade(f.color, 0.85));   // 背板（-y）；開口＝+y 朝鏡頭
+  }
   f.cab.parts.forEach(function (p, i) {
     var pbad = cabPartBad(f, p);
     var cls = (i === cabSelP ? 'psel' : '') + (pbad ? ' pbad' : '');
     var pcol = pbad ? '#d32f2f' : shade(f.color, 1.16);
-    if (p.dir === 'h') cabBoxInto(inn.iw, inn.idp, p.t, 0, TS / 2, zo + TS + p.pos - p.t / 2, pcol, cls, { 'data-pi': i });
-    else cabBoxInto(p.t, inn.idp, inn.ih, -inn.iw / 2 + p.pos, TS / 2, zo + TS, pcol, cls, { 'data-pi': i });
+    if (p.dir === 'h') cabBoxInto(inn.iw, inn.idp, p.t, ix + inn.iw / 2, shelfCy, zo + inn.z0 + p.pos - p.t / 2, pcol, cls, { 'data-pi': i });
+    else cabBoxInto(p.t, inn.idp, inn.ih, ix + p.pos, shelfCy, zo + inn.z0, pcol, cls, { 'data-pi': i });
   });
   f.cab.items.forEach(function (it, i) {
     var bad = cabItemBad(f, it);
-    cabBoxInto(it.w, it.d, it.h, -inn.iw / 2 + it.x, f.d / 2 - it.y, zo + TS + it.z,
-               bad ? '#d32f2f' : (it.color || '#c9a227'),
-               (i === cabSelI ? 'psel' : '') + (bad ? ' pbad' : ''), { 'data-ii': i });
+    var cls = (i === cabSelI ? 'psel' : '') + (bad ? ' pbad' : '');
+    var icx = ix + it.x, icy = f.d / 2 - inn.y0 - it.y, iz = zo + inn.z0 + it.z;
+    if (!bad && it.skin && SKIN3D[it.skin]) {   // 內建物件放入櫃內：以外皮呈現
+      SKIN3D[it.skin]({ w: it.w, d: it.d, h: it.h, z: iz, color: it.color || '#c9a227' },
+        function (bw, bd, bh, bz, cls2, cx2, cy2, col2) {
+          cabBoxInto(bw, bd, bh, (cx2 || 0) + icx, (cy2 || 0) + icy, bz, col2 || it.color || '#c9a227', cls, { 'data-ii': i });
+        }, '');
+    } else {
+      cabBoxInto(it.w, it.d, it.h, icx, icy, iz, bad ? '#d32f2f' : (it.color || '#c9a227'), cls, { 'data-ii': i });
+    }
   });
-  if (cabSelI >= 0 && f.cab.items[cabSelI]) {   // 選中物品：與內徑/隔板距離標示
+  if (cabSelI >= 0 && f.cab.items[cabSelI]) {   // 選中物品：六向距離標示（與懸停/主視圖統一）
     var it2 = f.cab.items[cabSelI], dd = cabItemDists(f, it2);
-    var yl = f.d / 2 - it2.y, zm = zo + TS + it2.z + it2.h / 2;
-    if (dd.left > 0.05)  cabLblInto(-inn.iw / 2 + it2.x - it2.w / 2 - dd.left / 2, yl, zm, '← ' + r1(dd.left));
-    if (dd.right > 0.05) cabLblInto(-inn.iw / 2 + it2.x + it2.w / 2 + dd.right / 2, yl, zm, r1(dd.right) + ' →');
-    if (dd.up > 0.05)    cabLblInto(-inn.iw / 2 + it2.x, yl, zo + TS + it2.z + it2.h + dd.up / 2, '↕ ' + r1(dd.up));
+    var lx0 = ix + it2.x, yl = f.d / 2 - inn.y0 - it2.y;
+    var zb = zo + inn.z0 + it2.z, zm = zb + it2.h / 2;
+    if (dd.left > 0.05)  cabLblInto(lx0 - it2.w / 2 - dd.left / 2, yl, zm, '← ' + r1(dd.left));
+    if (dd.right > 0.05) cabLblInto(lx0 + it2.w / 2 + dd.right / 2, yl, zm, r1(dd.right) + ' →');
+    if (dd.up > 0.05)    cabLblInto(lx0, yl, zb + it2.h + dd.up / 2, '↕ ' + r1(dd.up));
+    if (dd.front > 0.05) cabLblInto(lx0, yl + it2.d / 2 + dd.front / 2, zm, '前 ' + r1(dd.front));
+    if (dd.back > 0.05)  cabLblInto(lx0, yl - it2.d / 2 - dd.back / 2, zm, '後 ' + r1(dd.back));
   }
   applyCabCam();
 }
@@ -2692,8 +2823,9 @@ function syncCabPanel() {
     var m2 = { ciName: it.name, ciW: it.w, ciD: it.d, ciH: it.h, ciY: it.y };
     for (var k2 in m2) { var e2 = $(k2); if (document.activeElement !== e2) e2.value = m2[k2]; }
     var bad = cabItemBad(cabF, it), dd = cabItemDists(cabF, it);
-    $('cabDist').textContent = bad ? '⚠ 放不下：超出內徑或與隔板重疊' :
-      '與內徑距離｜左 ' + r1(dd.left) + '｜右 ' + r1(dd.right) + '｜上 ' + r1(dd.up) + '｜深餘裕 ' + r1(dd.back);
+    $('cabDist').textContent = bad ? '⚠ 放不下：超出內部空間或與隔板/物品重疊' :
+      '距離｜左 ' + r1(dd.left) + '｜右 ' + r1(dd.right) + '｜上 ' + r1(dd.up) +
+      '｜前 ' + r1(dd.front) + '｜後 ' + r1(dd.back);
     $('cabDist').classList.toggle('bad', bad);
   }
   var box2 = $('cabList');
@@ -2785,17 +2917,56 @@ $('cabDelPart').addEventListener('click', function () {
   cabF.cab.parts.splice(cabSelP, 1); cabSelP = -1;
   renderCab(); syncCabPanel(); refreshAll();
 });
+BUILTINS.forEach(function (b) {   // 放置物品種類：自訂＋14 種內建物件
+  var op = document.createElement('option');
+  op.value = b.k;
+  op.textContent = b.emoji + ' ' + b.name + '（' + b.w + '×' + b.d + '×' + b.h + '）';
+  $('cabAddKind').appendChild(op);
+});
 $('cabAddItem').addEventListener('click', function () {
   if (!cabF) return;
   var inn = cabInner(cabF);
-  var it = { id: ciSeq++, name: '物品',
-             w: Math.max(4, Math.min(30, r1(inn.iw * 0.4))),
-             d: Math.max(4, Math.min(30, r1(inn.idp * 0.5))),
-             h: Math.max(4, Math.min(30, r1(inn.ih * 0.3))),
-             x: r1(inn.iw / 2), y: r1(inn.idp / 2), z: 0, color: '#c9a227' };
+  var bk = BUILTINS.find(function (b) { return b.k === $('cabAddKind').value; });
+  var it = bk ?
+    { id: ciSeq++, name: bk.name, w: bk.w, d: bk.d, h: bk.h,
+      x: r1(inn.iw / 2), y: r1(inn.idp / 2), z: 0, color: bk.color, skin: bk.k } :
+    { id: ciSeq++, name: '物品',
+      w: Math.max(4, Math.min(30, r1(inn.iw * 0.4))),
+      d: Math.max(4, Math.min(30, r1(inn.idp * 0.5))),
+      h: Math.max(4, Math.min(30, r1(inn.ih * 0.3))),
+      x: r1(inn.iw / 2), y: r1(inn.idp / 2), z: 0, color: '#c9a227' };
   cabF.cab.items.push(it);
+  if (cabItemBad(cabF, it)) showHint('⚠ 此物件超出內部空間（紅色警示）：可調整尺寸或刪除殼板/隔板再放');
   cabSelI = cabF.cab.items.length - 1; cabSelP = -1;
   renderCab(); syncCabPanel(); refreshAll();
+});
+/* 殼板刪除／恢復（底/頂/左/右）：刪底板＝內底直接是地板（檯面下擺放）。隔板/物品座標隨內緣原點平移補償 */
+function syncShellBtns() {
+  if (!cabF || !cabF.cab) return;
+  [['cabShellB', 'noBottom'], ['cabShellT', 'noTop'], ['cabShellL', 'noLeft'], ['cabShellR', 'noRight']]
+    .forEach(function (bk2) {
+      var off = !!cabF.cab[bk2[1]];
+      $(bk2[0]).classList.toggle('off', off);
+      $(bk2[0]).textContent = (off ? '↩ ' : '🗑 ') + { noBottom: '底板', noTop: '頂板', noLeft: '左板', noRight: '右板' }[bk2[1]];
+    });
+}
+['cabShellB', 'cabShellT', 'cabShellL', 'cabShellR'].forEach(function (bid) {
+  $(bid).addEventListener('click', function () {
+    if (!cabF) return;
+    var k = this.getAttribute('data-sk');
+    var inn0 = cabInner(cabF);
+    cabF.cab[k] = !cabF.cab[k];
+    var inn1 = cabInner(cabF);
+    var ddx = inn0.x0 - inn1.x0, ddz = inn0.z0 - inn1.z0;   // 內緣原點位移 → 物品/垂直隔板絕對位置不變
+    cabF.cab.items.forEach(function (it) { it.x = r1(it.x + ddx); it.z = Math.max(0, r1(it.z + ddz)); });
+    cabF.cab.parts.forEach(function (p) {
+      if (p.dir === 'v') p.pos = r1(p.pos + ddx); else p.pos = r1(p.pos + ddz);
+      p.pos = r1(cabClampPos(p, p.pos));
+    });
+    cabSettleItems(cabF);
+    syncShellBtns();
+    renderCab(); syncCabPanel(); refreshAll();
+  });
 });
 ['ciName', 'ciW', 'ciD', 'ciH', 'ciY'].forEach(function (id) {
   $(id).addEventListener('input', function () {
@@ -2857,7 +3028,7 @@ cabViewEl.addEventListener('pointermove', function (e) {
       var rr2 = cabViewEl.getBoundingClientRect();
       var lp = cabPlaneFromScreen(e.clientX - rr2.left, e.clientY - rr2.top);
       var inn3 = cabInner(cabF);
-      var lx3 = lp.x + inn3.iw / 2, lz3 = lp.z + cabF.h / 2 - CAB_TS;
+      var lx3 = lp.x + cabF.w / 2 - inn3.x0, lz3 = lp.z + cabF.h / 2 - inn3.z0;
       if (lx3 >= 0 && lx3 <= inn3.iw && lz3 >= 0 && lz3 <= inn3.ih) showCabHover(lx3, lz3);
       else clearCabHover();
     }
@@ -2923,6 +3094,31 @@ function showHint(msg) {
   clearTimeout(hintTimer);
   hintTimer = setTimeout(function () { hint.classList.remove('show'); }, 4500);
 }
+// 鍵盤方向鍵微調選取物件（0.5cm/步）：直接位移不經磁吸（可突破磁鐵誤判），但仍不可覆蓋牆面/其他物件
+var NUDGE = 0.5;
+function nudgeSel(ddx, ddy) {
+  var movers = [];
+  selIds.forEach(function (id) {
+    var f = byId(id);
+    if (!f) return;
+    if (movers.indexOf(f) === -1) movers.push(f);
+    if (!isPerson(f)) pileAbove(f).forEach(function (o) { if (movers.indexOf(o) === -1) movers.push(o); });   // 上方堆疊連動
+  });
+  if (!movers.length) return;
+  var old = movers.map(function (o) { return { o: o, x: o.x, y: o.y } });
+  movers.forEach(function (o) { o.x = r1(o.x + ddx * NUDGE); o.y = r1(o.y + ddy * NUDGE); });
+  var hitW = movers.some(collidesWalls);
+  var hitF = !hitW && movers.some(function (o) {
+    var c = collidesFurn(o);
+    return c && !movers.some(function (m) { return m.id === c.id; });
+  });
+  if (hitW || hitF) {
+    old.forEach(function (s) { s.o.x = s.x; s.o.y = s.y; });
+    showHint('❌ ' + (hitW ? '不可覆蓋牆面' : '與其他物件重疊') + '，微調已阻擋');
+    return;
+  }
+  refreshAll();
+}
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
     if (mStart) { mStart = null; redrawMeasures(); }
@@ -2934,6 +3130,12 @@ document.addEventListener('keydown', function (e) {
   }
   if ((e.key === 'r' || e.key === 'R') && selIds.length && document.activeElement.tagName !== 'INPUT') {
     rotateSel();
+  }
+  var am = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
+  if (am && selIds.length && document.activeElement.tagName !== 'INPUT' &&
+      !cabModal.classList.contains('show')) {
+    e.preventDefault();
+    nudgeSel(am[0], am[1]);
   }
   if ((e.ctrlKey || e.metaKey) && document.activeElement.tagName !== 'INPUT') {
     if (e.key === 'c' || e.key === 'C') { if (doCopy()) e.preventDefault(); }
@@ -3267,8 +3469,9 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
     var ox2 = (r.width - vb.w * s) / 2, oy2 = (r.height - vb.h * s) / 2;
     return { x: r.left + ox2 + (px_ - vb.x) * s, y: r.top + oy2 + (py_ - vb.y) * s };
   }
-  function pev(el, type, x, y) {
-    el.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, isPrimary: true, buttons: 1 }));
+  function pev(el, type, x, y, btns) {
+    el.dispatchEvent(new PointerEvent(type, { pointerId: 7, clientX: x, clientY: y, bubbles: true, isPrimary: true,
+                                              buttons: btns == null ? 1 : btns }));
   }
   var simF = addFurniture({ name: '模擬', w: 60, d: 60, h: 20, x: 200, y: 700, rot: 0, color: '#777' });
   redrawFurniture2d();
@@ -3714,13 +3917,14 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var s58a = ciFaces.length === 6 * bic.items.length;
   updateGuides({ x: bi.x, y: bi.y }, byId(bi.id), 0);
   var vl58 = Array.prototype.map.call(vgHost.querySelectorAll('.vglbl'), function (t) { return t.textContent; }).join('|');
-  var s58b = vl58.indexOf('← 5') !== -1 && vl58.indexOf('31 →') !== -1 && vl58.indexOf('↕ 39') !== -1;
+  var s58b = vl58.indexOf('← 5') !== -1 && vl58.indexOf('31 →') !== -1 && vl58.indexOf('↕ 39') !== -1 &&
+             vl58.indexOf('前 20') !== -1 && vl58.indexOf('後 28') !== -1;   // 六向：前=30-10、後=68-40
   updateGuides({ x: bi.x, y: bi.y }, byId(bi.id), null);
   var vl58b = Array.prototype.map.call(vgHost.querySelectorAll('.vglbl'), function (t) { return t.textContent; }).join('|');
-  var s58c = vl58b.indexOf('內徑 56×68×176') !== -1;
+  var s58c = vl58b.indexOf('內部 56×68×176') !== -1;
   hideGuides();
   setMode(false);
-  ck('3D懸停櫃內距離(物品/內徑)', s58a && s58b && s58c, '(faces=' + ciFaces.length + '｜' + vl58 + ')');
+  ck('3D懸停櫃內距離(物品六向/內部)', s58a && s58b && s58c, '(faces=' + ciFaces.length + '｜' + vl58 + ')');
   // 59. 磁鐵Bug根治：對角拖入客廳左上牆角（130, 607.5＝臥室中下牆客廳側面）→ 兩面精確貼齊、無殘留間隙
   pm.x = 200; pm.y = 560; refreshAll();   // 讓開路徑
   var cb59 = addFurniture({ name: '牆角測試', w: 60, d: 60, h: 40, x: 230, y: 680, rot: 0, color: '#888888' });
@@ -3765,12 +3969,119 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   pev(cabViewEl, 'pointermove', rc6.left + s61pt[0], rc6.top + s61pt[1]);
   var hov61 = Array.prototype.map.call(cabWorld.querySelectorAll('.cabLbl[data-hov]'),
     function (t) { return t.textContent; }).join('|');
-  // (40,40)：上=隔板1底59-40=19、下=40、左=40、右=16
-  var s61ok = hov61.indexOf('↕ 19') !== -1 && hov61.indexOf('↕ 40') !== -1 && hov61.indexOf('16') !== -1;
+  // (40,40)：上=隔板1底59-40=19、下=40、左=40、右=16；前/後=深度中線 68/2=34（與主視圖六向規則統一）
+  var s61ok = hov61.indexOf('↕ 19') !== -1 && hov61.indexOf('↕ 40') !== -1 && hov61.indexOf('16') !== -1 &&
+              hov61.indexOf('前 34') !== -1 && hov61.indexOf('後 34') !== -1;
   clearCabHover();
   var s61clr = cabWorld.querySelectorAll('[data-hov]').length === 0;
   $('cabClose').click();
-  ck('櫃內懸停鄰近點(四向)', s61ok && s61clr, '(' + hov61 + ')');
+  ck('櫃內懸停鄰近點(六向)', s61ok && s61clr, '(' + hov61 + ')');
+  // 62. 鞋櫃內建預設尺寸 64×32×200
+  var sh62 = BUILTINS.find(function (b) { return b.k === 'shoe'; });
+  ck('鞋櫃預設 64×32×200', sh62 && sh62.w === 64 && sh62.d === 32 && sh62.h === 200,
+     '(' + sh62.w + '×' + sh62.d + '×' + sh62.h + ')');
+  // 63. 2D 左+右鍵同按＝平移平面圖（縮放不變）；進行中的家具拖曳即刻取消退回原位
+  var pan63 = addFurniture({ name: '平移測試', w: 40, d: 40, h: 30, x: 200, y: 640, rot: 0, color: '#778899' });
+  redrawFurniture2d();
+  var g63 = furnLayer.querySelector('[data-fid="' + pan63.id + '"]');
+  var c63 = planToClient(200, 640);
+  pev(g63, 'pointerdown', c63.x, c63.y);
+  pev(stage, 'pointermove', c63.x + 30, c63.y);              // 左鍵拖曳：家具移動
+  var drag63 = pan63.x !== 200;
+  var vbx63 = vb.x, vby63 = vb.y, s63 = scale2d(), vw63 = vb.w;
+  pev(stage, 'pointermove', c63.x + 70, c63.y + 20, 3);      // 加按右鍵（buttons=3）→ 平移視圖
+  var pan63ok = Math.abs(vb.x - (vbx63 - 40 / s63)) < 0.05 && Math.abs(vb.y - (vby63 - 20 / s63)) < 0.05 &&
+                vb.w === vw63;
+  var back63 = pan63.x === 200 && pan63.y === 640 && pan63.z === 0;   // 家具退回原位
+  pev(stage, 'pointerup', c63.x + 70, c63.y + 20, 0);
+  var stay63 = pan63.x === 200 && pan63.y === 640;
+  delFurniture(pan63.id);
+  fit2d();
+  ck('2D 左+右鍵平移平面圖+拖曳退回', drag63 && pan63ok && back63 && stay63,
+     '(拖動=' + drag63 + ', 平移=' + pan63ok + ', 退回=' + back63 + ')');
+  // 64. 3D 左+右鍵同按＝平移（視角角度/縮放不變、家具全部不動）
+  setMode(true); cam.rz = 20; cam.rx = 60; applyCam();
+  var r64 = scene3d.getBoundingClientRect();
+  var px64 = cam.px, py64 = cam.py, rz64 = cam.rz, rx64 = cam.rx, s64 = cam.s;
+  var snap64 = JSON.stringify(furniture.map(function (o) { return [o.x, o.y, o.z]; }));
+  pev(scene3d, 'pointerdown', r64.left + 300, r64.top + 300);
+  pev(scene3d, 'pointermove', r64.left + 340, r64.top + 315, 3);
+  var ok64 = cam.px === px64 + 40 && cam.py === py64 + 15 &&
+             cam.rz === rz64 && cam.rx === rx64 && cam.s === s64;
+  pev(scene3d, 'pointerup', r64.left + 340, r64.top + 315, 0);
+  var same64 = snap64 === JSON.stringify(furniture.map(function (o) { return [o.x, o.y, o.z]; }));
+  cam.px = px64; cam.py = py64; applyCam();
+  setMode(false); setSel(null); refreshAll();
+  ck('3D 左+右鍵平移(角度縮放不變)', ok64 && same64, '(平移=' + ok64 + ', 家具不動=' + same64 + ')');
+  // 65. 鍵盤方向鍵微調 0.5cm/步（不經磁吸），朝牆連按＝被擋停、全程不覆蓋牆/物件
+  var kb65 = addFurniture({ name: '微調測試', w: 40, d: 40, h: 30, x: 200, y: 640, rot: 0, color: '#998877' });
+  setSel(kb65.id); refreshAll();
+  function kev(k2) { document.dispatchEvent(new KeyboardEvent('keydown', { key: k2, bubbles: true })); }
+  kev('ArrowLeft');  var n65a = kb65.x === 199.5 && kb65.y === 640;
+  kev('ArrowUp');    var n65b = kb65.y === 639.5;
+  kev('ArrowRight'); kev('ArrowDown');
+  var n65c = kb65.x === 200 && kb65.y === 640;
+  var inv65 = false, last65 = -1, guard65 = 0;
+  while (guard65++ < 300 && kb65.x !== last65) {   // 連按左：左牆面 x=130 前停下（中心 x=150）
+    last65 = kb65.x;
+    kev('ArrowLeft');
+    if (collidesWalls(kb65) || collidesFurn(kb65)) inv65 = true;
+  }
+  var wall65 = kb65.x === 150 && guard65 < 300 && !inv65;
+  delFurniture(kb65.id); setSel(null);
+  ck('鍵盤微調0.5cm+不可覆蓋牆阻擋', n65a && n65b && n65c && wall65,
+     '(往返=' + n65c + ', 停於x=' + kb65.x + ')');
+  // 66. 殼板刪除（底/頂/左/右）＋內建物件放置櫃內＋櫃內物品六向距離
+  var cb66 = addFurniture({ name: '層架', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
+  setSel(cb66.id); refreshAll(); openCab(cb66);
+  var ih66 = cabInner(cb66).ih;                       // 96
+  $('cabShellB').click();                             // 刪底板 → 內底=地板
+  var innB66 = cabInner(cb66);
+  var noB66 = cb66.cab.noBottom === true && innB66.z0 === 0 && Math.abs(innB66.ih - (ih66 + 2)) < 0.01;
+  $('cabShellT').click(); $('cabShellL').click(); $('cabShellR').click();
+  var innA66 = cabInner(cb66);
+  var all66 = Math.abs(innA66.ih - 100) < 0.01 && Math.abs(innA66.iw - 80) < 0.01 && hasCab(cb66);
+  $('cabAddKind').value = 'luggage';                  // 內建物件（行李箱 50×32×75）放入櫃內＝檯面下模擬
+  $('cabAddItem').click();
+  $('cabAddKind').value = '';
+  var it66 = cb66.cab.items[cb66.cab.items.length - 1];
+  var lg66 = it66.skin === 'luggage' && it66.w === 50 && it66.h === 75 && it66.z === 0 && !cabItemBad(cb66, it66);
+  var dd66 = cabItemDists(cb66, it66);                // iw80/idp38/ih100，物品置中：左右15、前後3、上25
+  var six66 = Math.abs(dd66.left - 15) < 0.01 && Math.abs(dd66.right - 15) < 0.01 &&
+              Math.abs(dd66.front - 3) < 0.01 && Math.abs(dd66.back - 3) < 0.01 &&
+              Math.abs(dd66.up - 25) < 0.01;
+  showCabItemHover(cb66.cab.items.length - 1);        // 懸停物品＝六向標籤（與主視圖樣式統一）
+  var hv66 = Array.prototype.map.call(cabWorld.querySelectorAll('.cabLbl[data-hov]'),
+    function (t2) { return t2.textContent; }).join('|');
+  var lbl66 = hv66.indexOf('← 15') !== -1 && hv66.indexOf('15 →') !== -1 && hv66.indexOf('↕ 25') !== -1 &&
+              hv66.indexOf('前 3') !== -1 && hv66.indexOf('後 3') !== -1;
+  clearCabHover();
+  $('cabShellB').click();                             // 恢復底板：內緣原點補償、物品仍合法
+  var re66 = !cb66.cab.noBottom && !cabItemBad(cb66, cb66.cab.items[0]) && cb66.cab.items[0].z === 0;
+  $('cabShellB').click();                             // 再刪＝維持檯面下情境
+  $('cabClose').click();
+  var keep66 = hasCab(cb66) && cb66.cab.noBottom === true;   // 關閉後殼板狀態保留（僅旗標也算櫃體）
+  delFurniture(cb66.id); setSel(null);
+  ck('殼板刪除(底頂左右)+內建物件入櫃+六向', noB66 && all66 && lg66 && six66 && lbl66 && re66 && keep66,
+     '(刪底=' + noB66 + ', 全刪=' + all66 + ', 行李箱=' + lg66 + ', 六向=' + six66 + '/' + lbl66 + ')');
+  // 67. 桌子進櫃體介面：保留原外皮與原結構屬性（無殼板可刪、桌下＝內部空間可放置）
+  var tb67 = addBuiltin('table', 250, 640);
+  setSel(tb67.id); refreshAll(); openCab(tb67);
+  var inn67 = cabInner(tb67);
+  var t67 = Math.max(3, Math.min(5, tb67.h * 0.08));   // 桌板厚 5
+  var skin67 = inn67.skin === true && Math.abs(inn67.ih - (tb67.h - t67)) < 0.01 &&
+               Math.abs(inn67.iw - tb67.w) < 0.01 && inn67.z0 === 0 &&
+               $('cabShellWrap').style.display === 'none';
+  $('cabAddKind').value = 'carryon';                   // 桌下放登機箱 40×23×56（內高 65）
+  $('cabAddItem').click();
+  $('cabAddKind').value = '';
+  var it67 = tb67.cab.items[0];
+  var fit67 = it67.skin === 'carryon' && it67.z === 0 && !cabItemBad(tb67, it67);
+  $('cabClose').click();
+  var keep67 = hasCab(tb67) && cabInner(tb67).skin === true;   // 主視圖仍走原外皮渲染分支
+  delFurniture(tb67.id); setSel(null);
+  ck('桌子進櫃體保留外皮+桌下放置', skin67 && fit67 && keep67,
+     '(外皮=' + skin67 + ', 桌下=' + fit67 + ', 主視圖=' + keep67 + ')');
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();

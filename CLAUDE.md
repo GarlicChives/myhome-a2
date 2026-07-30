@@ -11,7 +11,7 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 61 項）。自測不可只靠截圖：必須含真實
+**新功能必須同步新增對應斷言**（selftest 目前 67 項）。自測不可只靠截圖：必須含真實
 PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類（含 14 種內建物件全規則掃描）。
 **測試路徑要含對角/牆角等非軸向情境**（曾因只測軸向漏掉「對角逼近牆角整步退回卡住」的滑動 Bug）。
 
@@ -20,7 +20,7 @@ PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類�
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **61 項全 PASS**；有新功能先補斷言再回到步驟 3。
+4. headless Chrome 跑 `?selftest=1` → **67 項全 PASS**；有新功能先補斷言再回到步驟 3。
 5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood / st=cab），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit`。**永久規則：`git push` 與部署必須等使用者明確下令才可執行**
@@ -74,26 +74,39 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 - 物件顏色＝調色盤（#fColor input type=color，取代舊 16 色格）：選取物件即時套用、面板同步顯示 hex。
 - **系統內建物件 14 種**（BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
   小餐邊推車/垃圾桶/投影機/洗衣籃；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
-  改用 60×70×180）：內建於程式、不受存檔影響；**本質＝一般物件**（可自訂長寬高、受全部物件規則）；
+  改用 60×70×180；**鞋櫃 2026-07-31 依使用者指定改 64×32×200**）：內建於程式、不受存檔影響；
+  **本質＝一般物件**（可自訂長寬高、受全部物件規則）；
   3D 以 SKIN3D 多部件外皮呈現（比例縮放）。**正面＝+y（預設視角近側）**：門面/櫃體開口/沙發座向皆同。
   **匯入/載入存檔/還原版本時，名稱同內建物件者自動換皮（applySkins）**。
 - **上一步（復原）**：histStack（saveState→pushHistory 去重、上限 100）、Ctrl+Z 或 header「↩ 復原」；
   undo 以快照整批替換 furniture（**測試中 undo 後所有物件參照需 byId 重綁**）。
 - **選取懸浮功能列 #selBar**（單選時顯示於物件上方）：🗄 櫃體／⟳90°／⧉ 複製／🗑 刪除（人物無櫃體鈕）。
 - **櫃體編輯 Modal（90vw×90vh）**：物件變空心殼（殼厚 CAB_TS=2cm、正面 +y 開放）＋隔板＋櫃內物品。
-  f.cab={t(隔板厚度預設 2、範圍 0.4~3), parts:[{dir:'h'|'v',pos,t}], items:[{w,d,h,x,y,z,...}]}；
+  f.cab={t(隔板厚度預設 2、範圍 0.4~3), parts:[{dir:'h'|'v',pos,t}], items:[{w,d,h,x,y,z,skin?,...}],
+  noBottom/noTop/noLeft/noRight}；**殼板（底/頂/左/右）可個別刪除／恢復**（側欄四鈕；刪底板＝內底直接是
+  地板，可模擬檯面下擺放行李箱）——內部座標原點＝內左緣/內底（cabInner 回傳 x0/z0/y0 偏移），
+  切換殼板時物品/隔板座標會平移補償、絕對位置不變；hasCab 含僅殼板旗標；closeCab 用 hasCab 判斷保留。
+  **具外皮物件（SKIN_INNER：桌子/小椅子/推車/洗衣籃）進櫃體不轉空心殼**：保留原外皮與原結構屬性
+  （桌下＝內部空間、無殼板可刪，cabInner 回傳 skin:true 走 SKIN3D 渲染分支）。
+  **放置物品可選內建物件**（#cabAddKind 下拉：自訂＋14 種；item 帶 skin 以外皮渲染於 Modal 與主 3D）。
   隔板新增自動延伸至內徑並平均分配（span*(i+1)/(n+1)＝由中間算起不貼邊）、可拖曳/輸入調位
   （clamp 僅限內徑範圍；**與同向隔板重疊＝整片變紅警示、放開退回**，v↔h 十字相交合法）；
   **移動水平隔板時其頂面上物品（含堆疊遞迴 cabItemsOn）連動位移**，物品壓到其他隔板也紅+退回。
   物品規則特例：**下方必有支點（不會釘牆）**＝櫃底/隔板頂/其他物品頂（cabItemFloor＋cabSettleItems，
   掛在 settleGravity）；物品可互疊但總高不可超上方隔板（超過→cabItemBad 紅）；物品互相重疊＝紅。
   距離（cabItemDists）精準計入內徑、所有隔板厚度與其他物品；放不下（cabItemBad）整件變紅+放開退回。
-  **懸停鄰近點規則（Modal 內）**：懸停物品/隔板/櫃內任意空白點（cabPlaneFromScreen 反解深度中線平面）
-  皆顯示四向鄰近距離（cabPointDists：內壁/隔板/物品）。**主視圖 3D 懸停**：物品面標 data-ci → 顯示
-  該物品距離標籤；懸停櫃體顯示內徑（updateCabGuides）。
+  **懸停鄰近點規則（Modal 內，與主視圖 3D 統一＝六向：左右上下＋前後）**：懸停物品/隔板/櫃內任意
+  空白點（cabPlaneFromScreen 反解深度中線平面）皆顯示鄰近距離（cabPointDists／cabItemDists 含
+  front/back：開口側=前、背板側=後）。**主視圖 3D 懸停**：物品面標 data-ci → 顯示該物品六向距離標籤；
+  懸停櫃體顯示內部空間（updateCabGuides，標籤文字＝「內部 W×D×H」）。
   cab 資料隨 furniture 存檔/匯出/複製；主 2D 顯內徑虛線框＋垂直隔板、主 3D 空心渲染（重疊隔板紅）。
   Modal 自有 3D（cabCam/cabPt 與 fwd3d 同構數學，供拖曳軸投影與懸停反解）。
 - Shift+點選多選＋R 群組旋轉（繞群組外框中心）；Ctrl+C/V 複製貼上；滾輪換疊放層。
+- **左+右鍵同時按住拖曳＝平移整張平面圖**（2D 移 viewBox、3D 移 cam.px/py，軸心/角度/縮放不變）：
+  進行中的家具拖曳/旋轉即刻取消退回原位（abortActiveDrag）；右鍵單獨拖曳＝平移（2D/3D 一致）、
+  右鍵不啟動家具拖曳、stage/scene3d 均 preventDefault contextmenu。
+- **鍵盤方向鍵微調選取物件 0.5cm/步**（nudgeSel）：直接位移不經磁吸（可突破磁鐵誤判），
+  但不可覆蓋牆面/其他物件（違者整步阻擋+提示）；上方堆疊 pileAbove 連動；INPUT 聚焦或櫃體 Modal 開啟時不作用。
 - 選取顯示長寬高：CAD 標註樣式畫在對應邊緣（2D 標註線、3D 邊緣 billboard）。
 - 3D 標籤一律 billboard（反向抵銷 rotateX/rotateZ＋反縮放）。
 - 教學 Modal：首次進站自動彈出（今日不再顯示存 localStorage 當日字串）、Header「❓ 教學」可重開；
