@@ -35,6 +35,11 @@
   #world { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
   #floorHost { position: absolute; transform-style: preserve-3d; }
   #floorHost svg.plan { width: 100%; height: 100%; display: block; }
+  /* 天花板：極度半透明平面（僅視覺感受高度、不擋點擊；邊框較明顯以辨識高度位置） */
+  #ceilPlane { position: absolute; display: none; pointer-events: none;
+               background: rgba(150,200,255,.08); border: 2px solid rgba(150,200,255,.55);
+               box-shadow: inset 0 0 60px rgba(150,200,255,.12); }
+  #scene3d .lbl3d.ceillbl { color: #9ecbff; font-size: 13px; }
   #boxHost { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
   .box3d { position: absolute; transform-style: preserve-3d; }
   .face { position: absolute; left: 0; top: 0; transform-origin: 0 0; border: 1px solid rgba(0,0,0,.28); backface-visibility: visible; }
@@ -57,8 +62,13 @@
   #panel.open { display: block; }
   #panel h3 { font-size: 13px; margin: 4px 0 8px; color: #9ab; }
   #panel label { display: block; font-size: 12px; color: #aaa; margin: 6px 0 2px; }
-  #panel input[type=text], #panel input[type=number] { width: 100%; background: #15151a; color: #eee;
+  #panel input[type=text], #panel input[type=number], #panel select, #panel textarea {
+      width: 100%; background: #15151a; color: #eee;
       border: 1px solid #4a4a55; border-radius: 4px; padding: 5px 6px; font-size: 13px; font-family: inherit; }
+  #panel textarea { resize: vertical; line-height: 1.5; }
+  #panel select { flex: 1; }
+  #cabSide textarea { width: 100%; background: #15151a; color: #eee; border: 1px solid #4a4a55;
+      border-radius: 4px; padding: 5px 6px; font-size: 13px; font-family: inherit; resize: vertical; line-height: 1.5; }
   .dimrow { display: flex; gap: 6px; }
   .dimrow > div { flex: 1; }
   #palette { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-top: 4px; }
@@ -215,8 +225,13 @@
              background: linear-gradient(#20242e, #0c0d12 60%); cursor: grab; }
   #cabVp { position: absolute; inset: 0; perspective: 1400px; }
   #cabWorld { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
-  #cabHint { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); color: #aab;
+  #cabHint { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); color: #aab;
              font-size: 12px; pointer-events: none; white-space: nowrap; }
+  /* 右上角工具列：上一步／完成儲存／取消 */
+  #cabTools { position: absolute; top: 10px; right: 12px; display: flex; gap: 6px; z-index: 5; }
+  #cabTools button { padding: 5px 10px; font-size: 12.5px; }
+  #cabTools #cabClose { background: #1f4d2e; border-color: #2f7a48; color: #d8f5e2; }
+  #cabTools #cabCancel { background: #4a2828; border-color: #7a3a3a; color: #f2c0c0; }
   #cabView .face.psel { border: 2px dashed #ff3366; }
   #cabView .face.pbad { border: 2px solid #ff2222; }
   #cabView .face.csel { border: 1.5px dashed #2ecc71; }
@@ -271,6 +286,7 @@
     <div id="scene3d">
       <div id="viewport"><div id="world">
         <div id="floorHost"></div>
+        <div id="ceilPlane"></div>
         <div id="boxHost"></div>
         <div id="vgHost"></div>
       </div></div>
@@ -278,12 +294,22 @@
     </div>
     <div id="panel" class="open">
       <h3 id="panelTitle">新增物件（家具／家電…）</h3>
+      <label>系統內建物件／人物（下拉選取後「加入」；本質同一般物件，可再改長寬高）</label>
       <div class="btnrow" style="margin-top:0">
-        <button id="btnMan">👨 男主人</button>
-        <button id="btnWoman">👩 女主人</button>
+        <select id="builtinSel"></select>
+        <button id="btnAddBuiltin" style="flex:0 0 76px">➕ 加入</button>
       </div>
-      <label>系統內建物件（點擊新增；本質同一般物件，可再改長寬高）</label>
-      <div id="builtinGrid"></div>
+      <div id="pipeWrap" style="display:none">
+        <label>管柱型式（直／L／U；只要一端可固定即可釘住）</label>
+        <div class="btnrow" style="margin-top:0">
+          <select id="fPipe">
+            <option value="I">— 直管</option>
+            <option value="L">⌐ L 型（頂部橫段＋一端垂直段）</option>
+            <option value="U">∩ U 型（頂部橫段＋兩端垂直段）</option>
+          </select>
+          <input type="number" id="fPipeT" value="8" min="2" max="60" step="1" title="管徑（cm）" style="flex:0 0 76px">
+        </div>
+      </div>
       <label>名稱（可留空）</label>
       <input type="text" id="fName" value="沙發" maxlength="12">
       <div class="dimrow">
@@ -298,13 +324,13 @@
         <div><label>旋轉（度）</label><input type="number" id="fR" value="0" step="15"></div>
         <div><label style="visibility:hidden">.</label><button id="btnRot90" style="width:100%">旋轉90°</button></div>
       </div>
-      <label>天花板高（cm｜堆疊上限）</label>
-      <input type="number" id="fCeil" value="280" min="100" max="600">
       <label>顏色（調色盤）</label>
       <div class="colorrow">
         <input type="color" id="fColor" value="#c9a227">
         <span class="hex" id="fColorHex">#c9a227</span>
       </div>
+      <label>備註（可留空）</label>
+      <textarea id="fNote" rows="2" maxlength="200" placeholder="例：訂製尺寸、廠商、插座位置…"></textarea>
       <div class="btnrow">
         <button id="btnAdd">➕ 新增</button>
         <button id="btnUpdate" disabled>套用修改</button>
@@ -313,6 +339,11 @@
         <button id="btnDup" disabled>⧉ 複製</button>
         <button id="btnStack" disabled>⬆ 疊放</button>
         <button id="btnDel" disabled>🗑 刪除</button>
+      </div>
+      <h3 style="margin-top:12px">天花板</h3>
+      <div class="dimrow">
+        <div><label>高度（cm）</label><input type="number" id="fCeil" value="280" min="100" max="600"></div>
+        <div><label>3D 顯示</label><button id="btnCeilShow" style="width:100%">顯示天花板</button></div>
       </div>
       <div id="furnList"></div>
     </div>
@@ -357,10 +388,17 @@
         <div class="btnrow">
           <button id="cabAddItem">📦 放置物品</button>
           <button id="cabEven">平均分配</button>
-          <button id="cabUndoBtn" title="櫃體編輯上一步（Ctrl+Z）">↩ 上一步</button>
         </div>
-        <label>放置物品種類（可選內建物件）</label>
+        <label>放置物品種類（可選內建物件；選取後自動帶入預設尺寸）</label>
         <select id="cabAddKind"><option value="">自訂物品</option></select>
+        <div class="dimrow">
+          <div><label>長（cm）</label><input type="number" id="ciAddW" value="20" min="1" max="2000"></div>
+          <div><label>寬（cm）</label><input type="number" id="ciAddD" value="20" min="1" max="2000"></div>
+        </div>
+        <div class="dimrow">
+          <div><label>高（cm）</label><input type="number" id="ciAddH" value="20" min="1" max="600"></div>
+          <div><label>顏色</label><input type="color" id="ciAddColor" value="#c9a227" style="height:30px;padding:2px"></div>
+        </div>
         <div id="cabShellWrap">
           <label>殼板（點擊刪除／恢復；刪底板＝直接地板，可模擬檯面下擺放）</label>
           <div class="btnrow">
@@ -416,19 +454,24 @@
           <div id="cabDist"></div>
           <div class="btnrow"><button id="cabDelItem">🗑 移除物品</button></div>
         </div>
+        <label>櫃體備註（可留空）</label>
+        <textarea id="cabNote" rows="2" maxlength="200" placeholder="例：層板可調、五金型號、門片方向…"></textarea>
         <div id="cabList"></div>
         <div class="note">殼厚 2cm、正面開放（前方即開口、無前板）；底／頂／左／右／背殼板與所有隔板皆為物件：
           點選（3D 或下方列表）即可編輯顏色／材質（玻璃＝半透明、洞洞板）或刪除；刪底板＝直接地板可模擬檯面下。
           內建物件有櫃體修改儲存後，外觀改為櫃體殼板（不再是內建外皮）；主視圖「復原」＝整段編輯一步退回。
           放置物品須先點擊櫃內空白格選取「放置格」，且格內剩餘體積足夠；同格多件自動平均間隔擺放，
-          放不下改堆疊（較大者一律在下方）。拖曳隔板沿軸調整間隔；物品可拖曳微調（自動落在支撐面）。</div>
-        <div class="foot" style="display:flex;justify-content:flex-end;margin-top:10px">
-          <button id="cabClose">完成</button>
-        </div>
+          放不下改堆疊（較大者一律在下方）。新增物品尺寸＝上方「長／寬／高」輸入的當下值（選內建種類會自動帶入其預設值，仍可再改）。
+          拖曳隔板沿軸調整間隔；物品可拖曳微調（自動落在支撐面）。選取隔板後按 Delete 亦可刪除。</div>
       </div>
       <div id="cabView">
         <div id="cabVp"><div id="cabWorld"></div></div>
-        <div id="cabHint">拖曳空白處旋轉視角｜滾輪縮放｜點擊空白格＝選取放置格（新增物品需先選格）｜點選殼板/隔板/物品＝編輯（顏色/玻璃/洞洞板）、拖曳調整位置｜↩ 上一步（Ctrl+Z）</div>
+        <div id="cabTools">
+          <button id="cabUndoBtn" title="櫃體編輯上一步（Ctrl+Z）">↩ 上一步</button>
+          <button id="cabClose" title="儲存並關閉">✔ 完成儲存</button>
+          <button id="cabCancel" title="取消（放棄本次編輯）並關閉">✕</button>
+        </div>
+        <div id="cabHint">拖曳空白處旋轉視角｜滾輪縮放｜點擊空白格＝選取放置格（新增物品需先選格）｜點選殼板/隔板/物品＝編輯（顏色/玻璃/洞洞板）、拖曳調整位置、Delete 刪隔板｜右上：↩ 上一步（Ctrl+Z）／✔ 完成儲存／✕ 取消</div>
       </div>
     </div>
   </div>
@@ -697,7 +740,7 @@ function hasCab(f) {
   if (!f || !f.cab) return false;
   var c = f.cab;
   return !!(c.parts.length || c.items.length || c.noBottom || c.noTop || c.noLeft || c.noRight ||
-            c.noBack || (c.sc && Object.keys(c.sc).length));
+            c.noBack || c.note || (c.sc && Object.keys(c.sc).length));
 }
 // 板材填色：一般＝原色；玻璃＝半透明；洞洞板＝原色＋圓洞紋（CSS background 可含漸層層）
 function boardFill(col, mat) {
@@ -1303,6 +1346,8 @@ function addFurniture(o) {
   if (o.kind) f.kind = o.kind;
   if (o.weight) f.weight = o.weight;
   if (o.skin) f.skin = o.skin;                                   // 內建物件 3D 外觀
+  if (o.note) f.note = o.note;                                   // 備註（自由文字）
+  if (o.pipe) { f.pipe = o.pipe; f.pipeT = o.pipeT || PIPE_T; }  // 管柱型式／管徑
   if (o.cab) f.cab = JSON.parse(JSON.stringify(o.cab));          // 櫃體資料（隔板/物品）
   if (isPerson(f)) f.z = 0;   // 人物不可離地
   if (f.z + f.h > CEIL) {   // 新增高度不可超過天花板
@@ -1355,14 +1400,18 @@ function rotateSel() {
   refreshAll();
   return true;
 }
-function refreshAll() { settleGravity(); redrawFurniture2d(); rebuildBoxes(); renderList(); syncPanel(); saveState(); }
+function refreshAll() {
+  settleGravity(); redrawFurniture2d(); rebuildBoxes();
+  if (typeof updateCeilPlane === 'function') updateCeilPlane();
+  renderList(); syncPanel(); saveState();
+}
 
 /* ============ Ctrl+C / Ctrl+V 複製貼上 ============ */
 var clipF = null;
 function doCopy() {
   var f = getSel(); if (!f) return false;
   clipF = { name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, rot: f.rot, color: f.color, kind: f.kind, weight: f.weight,
-            skin: f.skin, cab: f.cab };
+            skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT };
   showHint('已複製：' + (f.name || '（未命名）') + '（Ctrl+V 貼上）');
   return true;
 }
@@ -1370,7 +1419,8 @@ function doPaste() {
   if (!clipF) return null;
   var base = getSel();
   var o = { name: clipF.name, w: clipF.w, d: clipF.d, h: clipF.h, z: clipF.z, rot: clipF.rot, color: clipF.color,
-            kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab };
+            kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab,
+            note: clipF.note, pipe: clipF.pipe, pipeT: clipF.pipeT };
   if (base) { o.x = base.x + 30; o.y = base.y + 30; }
   else { o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2; }
   var nf = addFurniture(o);
@@ -1394,6 +1444,12 @@ function redrawFurniture2d() {
     if (isPerson(f)) {   // 俯視：肩膀＋頭圓
       el('circle', { cx: 0, cy: 0, r: Math.max(6, Math.min(11, f.d / 2 - 2)), fill: 'rgba(255,255,255,.3)',
                      'class': 'furn-rect', 'stroke-width': 1 }, g);
+    }
+    if (f.pipe) {   // 管柱俯視：實際管段投影（直/L/U）
+      pipeParts(f).forEach(function (p) {
+        el('rect', { x: p.cx - p.bw / 2, y: -p.bd / 2, width: p.bw, height: p.bd,
+                     fill: f.color, 'fill-opacity': 0.95, 'class': 'furn-rect', 'stroke-width': 0.8 }, g);
+      });
     }
     if (hasCab(f)) {   // 櫃體：內部空間虛線框＋垂直隔板（俯視可見；開口＝+y）
       var inn2 = cabInner(f), ix2d = -f.w / 2 + inn2.x0, iy2d = -f.d / 2 + (f.d - inn2.y0 - inn2.idp);
@@ -1523,12 +1579,19 @@ function syncPanel() {
     ? '編輯：' + (f.name || '（未命名）') + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
     : '新增物件（家具／家電…）';
   if (f) {   // 使用者正在輸入的欄位不回寫（避免游標被打斷）
-    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot };
+    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot, fNote: f.note || '' };
     for (var k in m) { var elk = $(k); if (document.activeElement !== elk) elk.value = m[k]; }
     if (document.activeElement !== $('fColor') && /^#[0-9a-fA-F]{6}$/.test(f.color)) {
       $('fColor').value = f.color;
       $('fColorHex').textContent = f.color;
     }
+  }
+  // 管柱欄位：選取管柱時顯示其型式/管徑；未選取時依下拉選單決定
+  var isPipe = !!(f && f.pipe);
+  $('pipeWrap').style.display = isPipe || (!f && $('builtinSel').value === 'pipe') ? '' : 'none';
+  if (isPipe) {
+    if (document.activeElement !== $('fPipe')) $('fPipe').value = f.pipe;
+    if (document.activeElement !== $('fPipeT')) $('fPipeT').value = f.pipeT || PIPE_T;
   }
   updateSelBar();
 }
@@ -1538,8 +1601,9 @@ function renderList() {
   furniture.forEach(function (f) {
     var d = document.createElement('div');
     d.className = 'fitem' + (isSel(f.id) ? ' sel' : '');
+    d.title = f.note ? '備註：' + f.note : '';
     d.innerHTML = '<span class="dot" style="background:' + f.color + '"></span>' +
-      '<span class="nm">' + (esc(f.name) || '（未命名）') + '</span><span class="sz">' +
+      '<span class="nm">' + (esc(f.name) || '（未命名）') + (f.note ? ' 📝' : '') + '</span><span class="sz">' +
       (isPerson(f) ? f.h + 'cm・' + (f.weight || '?') + 'kg' : f.w + '×' + f.d + '×' + f.h) + '</span>' +
       '<span class="del" title="刪除">✕</span>';
     d.addEventListener('click', function (ev) {
@@ -1555,7 +1619,7 @@ function readForm() {
   return { name: $('fName').value.trim(),   // 可留空
            w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
            h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
-           rot: +$('fR').value || 0, color: curColor };
+           rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
 }
 function clampN(v, lo, hi, dflt) { v = +v; if (isNaN(v)) return dflt; return Math.max(lo, Math.min(hi, v)); }
 $('btnAdd').addEventListener('click', function () {
@@ -1574,8 +1638,6 @@ function addPerson(sex, x, y) {
     x: x, y: y
   });
 }
-$('btnMan').addEventListener('click', function () { addPerson('m'); });
-$('btnWoman').addEventListener('click', function () { addPerson('f'); });
 
 /* ============ 系統內建物件（14 種）：內建於程式、不受存檔影響；本質＝一般物件（可自訂長寬高、受全部物件規則） ============ */
 var BUILTINS = [
@@ -1592,8 +1654,29 @@ var BUILTINS = [
   { k: 'cart',      name: '小餐邊推車', w: 45,  d: 35,  h: 80,  color: '#9e9e9e', emoji: '🛒' },
   { k: 'trash',     name: '垃圾桶',     w: 30,  d: 30,  h: 40,  color: '#607d8b', emoji: '🗑' },
   { k: 'projector', name: '投影機',     w: 35,  d: 26,  h: 12,  color: '#37474f', emoji: '📽' },
-  { k: 'laundry',   name: '洗衣籃',     w: 40,  d: 40,  h: 55,  color: '#d7b98e', emoji: '🧺' }
+  { k: 'laundry',   name: '洗衣籃',     w: 40,  d: 40,  h: 55,  color: '#d7b98e', emoji: '🧺' },
+  { k: 'shoes',     name: '鞋子',       w: 24,  d: 10,  h: 9,   color: '#5d4037', emoji: '👟' },   // 預設腳長 24cm
+  { k: 'pipe',      name: '管柱',       w: 120, d: 8,   h: 60,  color: '#454a52', emoji: '🪈' }    // 直/L/U（f.pipe、管徑 f.pipeT）
 ];
+var PIPE_T = 8;   // 管柱預設管徑（cm）
+// 管柱部件（local 座標，中心原點）：以 pipe 型式組出橫段/垂直段。t＝管徑
+function pipeParts(f) {
+  var t = Math.max(2, Math.min(Math.min(f.w, f.h), f.pipeT || PIPE_T));
+  var ty = Math.min(f.d, t), out = [];
+  var kind = f.pipe || 'I';
+  if (kind === 'I') {   // 直管：沿最長邊一根（其餘置中）
+    if (f.w >= f.h) out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });   // 水平直管（貼頂）
+    else out.push({ bw: t, bd: ty, bh: f.h, cx: 0, bz: 0 });                    // 垂直直管
+  } else if (kind === 'L') {   // 頂部橫段＋左端垂直段（如天花板轉折下牆）
+    out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
+    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
+  } else {   // U：頂部橫段＋兩端垂直段
+    out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
+    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
+    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: (f.w - t) / 2, bz: 0 });
+  }
+  return out;
+}
 // 3D 外觀（外皮）：以比例組合方塊，長寬高改變時整體等比跟隨；正面＝+y 側（預設視角的近側，看得到門面）
 var SKIN3D = {
   table: function (f, box, cls) {
@@ -1694,27 +1777,54 @@ var SKIN3D = {
   }
 };
 SKIN3D.carryon = SKIN3D.luggage;   // 登機箱＝行李箱外觀（尺寸不同）
+SKIN3D.shoes = function (f, box, cls) {   // 鞋子：鞋底＋鞋面＋鞋口（腳尖朝 +y）
+  var soleH = Math.max(1.5, f.h * 0.22);
+  box(f.w, f.d, soleH, f.z, '', 0, 0, shade(f.color, 0.55));
+  box(f.w * 0.62, f.d, f.h - soleH, f.z + soleH, cls, f.w * 0.19, 0);          // 鞋頭（+x 側）
+  box(f.w * 0.38, f.d * 0.86, (f.h - soleH) * 0.62, f.z + soleH, '', -f.w * 0.31, 0, shade(f.color, 1.12));
+};
+SKIN3D.pipe = function (f, box, cls) {   // 管柱：直/L/U（部件由 pipeParts 推導）
+  pipeParts(f).forEach(function (p, i) {
+    box(p.bw, p.bd, p.bh, f.z + p.bz, i === 0 ? cls : '', p.cx, 0,
+        i === 0 ? f.color : shade(f.color, 0.88));
+  });
+};
 function addBuiltin(k, x, y) {
   var b = null;
   BUILTINS.forEach(function (bb) { if (bb.k === k) b = bb; });
   if (!b) return null;
-  return addFurniture({ name: b.name, w: b.w, d: b.d, h: b.h, skin: b.k, color: b.color, x: x, y: y });
+  var o = { name: b.name, w: b.w, d: b.d, h: b.h, skin: b.k, color: b.color, x: x, y: y };
+  if (k === 'pipe') { o.pipe = ($('fPipe') && $('fPipe').value) || 'L'; o.pipeT = PIPE_T; }
+  return addFurniture(o);
 }
-(function buildBuiltinGrid() {
-  var gd = $('builtinGrid');
-  BUILTINS.forEach(function (b) {
-    var btn = document.createElement('button');
-    btn.textContent = b.emoji + ' ' + b.name;
-    btn.title = b.w + '×' + b.d + '×' + b.h + ' cm';
-    btn.addEventListener('click', function () { addBuiltin(b.k); });
-    gd.appendChild(btn);
+// 統一下拉選單（物件已多）：人物＋14 種內建物件
+(function buildBuiltinSelect() {
+  var sel = $('builtinSel');
+  [['person:m', '👨 男主人（171cm／75kg）'], ['person:f', '👩 女主人（154cm／48kg）']].forEach(function (p) {
+    var op = document.createElement('option');
+    op.value = p[0]; op.textContent = p[1];
+    sel.appendChild(op);
   });
+  BUILTINS.forEach(function (b) {
+    var op = document.createElement('option');
+    op.value = b.k;
+    op.textContent = b.emoji + ' ' + b.name + '（' + b.w + '×' + b.d + '×' + b.h + '）';
+    sel.appendChild(op);
+  });
+  sel.value = 'table';
+  sel.addEventListener('change', function () { $('pipeWrap').style.display = this.value === 'pipe' ? '' : 'none'; });
 })();
+$('btnAddBuiltin').addEventListener('click', function () {
+  var v = $('builtinSel').value;
+  if (v.indexOf('person:') === 0) addPerson(v.slice(7));
+  else addBuiltin(v);
+});
 // 所見即所得：選取狀態下右側輸入即時套用（高度受天花板/整疊高度限制）
 function liveApply() {
   var f = getSel(); if (!f) return;
   var o = readForm();
   f.name = o.name; f.w = o.w; f.d = o.d; f.rot = o.rot;
+  if (o.note) f.note = o.note; else delete f.note;
   f.z = isPerson(f) ? 0 : o.z;
   var clamped = setHeight(f, o.h);
   refreshAll();   // 內含 settleGravity：離地值會自動落回支撐面
@@ -1723,14 +1833,25 @@ function liveApply() {
     showHint('高度已限制：整疊不可超過天花板 ' + CEIL + ' cm（此件上限 ' + f.h + '）');
   } else if (isInvalid(f)) showHint('目前尺寸/位置與牆或家具重疊（紅框），請調整');
 }
-['fName', 'fW', 'fD', 'fH', 'fZ', 'fR'].forEach(function (id) {
+['fName', 'fW', 'fD', 'fH', 'fZ', 'fR', 'fNote'].forEach(function (id) {
   $(id).addEventListener('input', function () { if (getSel()) liveApply(); });
+});
+// 管柱型式／管徑：選取中的管柱即時套用（不影響其他物件規則）
+['fPipe', 'fPipeT'].forEach(function (id) {
+  $(id).addEventListener('input', function () {
+    var f = getSel();
+    if (!f || !f.pipe) return;
+    f.pipe = $('fPipe').value;
+    f.pipeT = clampN($('fPipeT').value, 2, 60, PIPE_T);
+    refreshAll();
+  });
 });
 $('btnUpdate').addEventListener('click', liveApply);
 $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
   addFurniture({ name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot, color: f.color,
-                 kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab });
+                 kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab, note: f.note,
+                 pipe: f.pipe, pipeT: f.pipeT });
 });
 $('btnStack').addEventListener('click', function () {
   var f = getSel(); if (!f || isPerson(f)) return;
@@ -1745,9 +1866,37 @@ $('btnStack').addEventListener('click', function () {
   else showHint('已疊放（離地 ' + top + ' cm）');
   refreshAll();
 });
+/* 天花板（3D）：極半透明平面，視覺感受高度；物件頂到天花板＝臨邊支點可釘固定（settleGravity/ceilTouch） */
+var ceilShow = false;
+function updateCeilPlane() {
+  var cp = $('ceilPlane');
+  if (!cp) return;
+  var on = ceilShow && mode3d;
+  cp.style.display = on ? 'block' : 'none';
+  cp.style.width = W + 'px';
+  cp.style.height = H + 'px';
+  cp.style.transform = 'translate3d(' + (-W / 2) + 'px,' + (-H / 2) + 'px,' + CEIL + 'px)';
+  vgHost.querySelectorAll('.ceillbl').forEach(function (n) { n.remove(); });
+  if (on) {   // 高度標示（billboard）：天花板 N cm
+    var lb = document.createElement('div');
+    lb.className = 'lbl3d ceillbl';
+    lb.setAttribute('data-x', 0); lb.setAttribute('data-y', -H / 2 + 30); lb.setAttribute('data-z', CEIL);
+    lb.textContent = '天花板 ' + CEIL + ' cm';
+    vgHost.appendChild(lb);
+    updateBillboards();
+  }
+}
+$('btnCeilShow').addEventListener('click', function () {
+  ceilShow = !ceilShow;
+  this.classList.toggle('active', ceilShow);
+  this.textContent = ceilShow ? '隱藏天花板' : '顯示天花板';
+  updateCeilPlane();
+  showHint(ceilShow ? '已顯示天花板（' + CEIL + ' cm，半透明；物件頂到天花板即可釘固定）' : '已隱藏天花板');
+});
 $('fCeil').addEventListener('change', function () {
   CEIL = clampN(this.value, 100, 600, 280);
   this.value = CEIL;
+  updateCeilPlane();
   refreshAll();
 });
 $('btnDel').addEventListener('click', function () { var f = getSel(); if (f) delFurniture(f.id); });
@@ -2337,11 +2486,13 @@ function setMode(to3d) {
     furnLayer.setAttribute('display', 'none');
     floorHost.appendChild(svg);
     rebuildBoxes();
+    updateCeilPlane();
     fit3d();
   } else {
     furnLayer.setAttribute('display', '');
     stage.appendChild(svg);
     hideGuides();
+    updateCeilPlane();
     fit2d(); redrawMeasures();
   }
 }
@@ -2460,7 +2611,7 @@ function rebuildBoxes() {
     lbl.setAttribute('data-x', f.x - W / 2);
     lbl.setAttribute('data-y', f.y - H / 2);
     lbl.setAttribute('data-z', f.z + f.h + 6);
-    lbl.textContent = (bad ? '⚠ ' : '') + f.name;
+    lbl.textContent = (bad ? '⚠ ' : '') + f.name + (f.note || (f.cab && f.cab.note) ? ' 📝' : '');
     lbl.style.fontSize = '14px';
     boxHost.appendChild(lbl);
     if (f.id === selId && selIds.length === 1) {
@@ -2704,11 +2855,12 @@ function openCab(f) {
   cabHist = [];
   $('cabTitle').textContent = f.name || '（未命名）';
   $('cabDefT').value = f.cab.t;
+  $('cabNote').value = f.cab.note || '';
   syncShellBtns();
   cabModal.classList.add('show');
   fitCabCam();
   renderCab(); syncCabPanel();
-  cabPush();   // 初始狀態
+  cabPush();   // 初始狀態（✕ 取消＝回到這一版）
 }
 function closeCab() {
   cabModal.classList.remove('show');
@@ -2716,6 +2868,19 @@ function closeCab() {
   else if (cabF && cabF.skin) delete cabF.skin; // 有櫃體修改儲存 → 外皮不再是內建物件樣子（改為殼板渲染）
   cabF = null; cabSelS = null; cabSelCell = null;
   refreshAll();   // Modal 已關閉 → 此次 saveState 記入主視圖歷史（整段編輯＝一步可復原）
+}
+// ✕ 取消：放棄本次編輯內容（回到開啟 Modal 當下的狀態）並關閉
+function cancelCab() {
+  if (cabF && cabHist.length) {
+    var d0 = JSON.parse(cabHist[0]);
+    cabF.cab = d0.cab;
+    if (d0.skin) cabF.skin = d0.skin; else delete cabF.skin;
+  }
+  cabModal.classList.remove('show');
+  if (cabF && !hasCab(cabF)) delete cabF.cab;
+  cabF = null; cabSelS = null; cabSelCell = null; cabSelP = -1; cabSelI = -1;
+  refreshAll();
+  showHint('已取消櫃體編輯（本次修改未儲存）');
 }
 function fitCabCam() {
   var r = cabViewEl.getBoundingClientRect();
@@ -3107,11 +3272,19 @@ $('cabPMat').addEventListener('change', function () {
   if (p.mat === 'glass' && !p.color) p.color = '#8ecae6';   // 玻璃預設淡藍
   cabCommit();
 });
-BUILTINS.forEach(function (b) {   // 放置物品種類：自訂＋14 種內建物件
+BUILTINS.forEach(function (b) {   // 放置物品種類：自訂＋內建物件
   var op = document.createElement('option');
   op.value = b.k;
   op.textContent = b.emoji + ' ' + b.name + '（' + b.w + '×' + b.d + '×' + b.h + '）';
   $('cabAddKind').appendChild(op);
+});
+// 選種類＝把該內建預設尺寸帶入輸入框（實際新增一律用輸入框當下值，可自行改）
+$('cabAddKind').addEventListener('change', function () {
+  var bk = BUILTINS.find(function (b) { return b.k === this.value; }, this);
+  if (bk) {
+    $('ciAddW').value = bk.w; $('ciAddD').value = bk.d; $('ciAddH').value = bk.h;
+    $('ciAddColor').value = bk.color;
+  }
 });
 /* 放置物品新增規則：須先選「放置格」且格內空間足夠（尺寸＋剩餘體積）；
    同格已有物品時自動排列——可並排＝平均間隔，否則堆疊（較大者一律在下方） */
@@ -3121,14 +3294,14 @@ $('cabAddItem').addEventListener('click', function () {
   if (!cell) { showHint('❌ 請先點選欲放置的放置格（點擊櫃內空白格選取，綠色虛線框）'); return; }
   var inn = cabInner(cabF);
   var bk = BUILTINS.find(function (b) { return b.k === $('cabAddKind').value; });
-  var it = bk ?
-    { id: ciSeq++, name: bk.name, w: bk.w, d: bk.d, h: bk.h,
-      x: r1((cell.x0 + cell.x1) / 2), y: r1(inn.idp / 2), z: r1(cell.z0), color: bk.color, skin: bk.k } :
-    { id: ciSeq++, name: '物品',
-      w: Math.max(4, Math.min(30, r1(inn.iw * 0.4))),
-      d: Math.max(4, Math.min(30, r1(inn.idp * 0.5))),
-      h: Math.max(4, Math.min(30, r1(inn.ih * 0.3))),
-      x: r1((cell.x0 + cell.x1) / 2), y: r1(inn.idp / 2), z: r1(cell.z0), color: '#c9a227' };
+  // 尺寸＝側欄「長／寬／高」輸入的當下值（選內建種類時已自動帶入其預設值，仍可自行修改）
+  var it = { id: ciSeq++, name: bk ? bk.name : '物品',
+             w: clampN($('ciAddW').value, 1, 2000, 20),
+             d: clampN($('ciAddD').value, 1, 2000, 20),
+             h: clampN($('ciAddH').value, 1, 600, 20),
+             x: r1((cell.x0 + cell.x1) / 2), y: r1(inn.idp / 2), z: r1(cell.z0),
+             color: $('ciAddColor').value || '#c9a227' };
+  if (bk) it.skin = bk.k;
   var err = cabCellCheck(cabF, cell, it);   // 放置格空間（尺寸＋體積）不足 → 不可新增
   if (err) { showHint('❌ 放置格空間不足：' + err); return; }
   cabF.cab.items.push(it);
@@ -3216,7 +3389,14 @@ $('cabDelItem').addEventListener('click', function () {
   cabCommit();
 });
 $('cabClose').addEventListener('click', closeCab);
-cabModal.addEventListener('click', function (e) { if (e.target === cabModal) closeCab(); });
+$('cabCancel').addEventListener('click', cancelCab);
+// 櫃體備註（自由文字，隨 cab 一起存檔/匯出/複製）
+$('cabNote').addEventListener('input', function () {
+  if (!cabF) return;
+  if (this.value) cabF.cab.note = this.value; else delete cabF.cab.note;
+  saveState(); cabPush();
+});
+// 點擊 Modal 外不再關閉（避免誤觸遺失編輯）——僅右上角 ✔ 完成儲存／✕ 取消可關閉
 var cabPtr = null;
 function cabDragDelta(axis, dx, dy) {   // 螢幕位移 → 櫃體局部軸位移（cm）
   var a = cabPt(0, 0, 0), b = cabPt(axis[0], axis[1], axis[2]);
@@ -3371,26 +3551,30 @@ document.addEventListener('keydown', function (e) {
     if (mStart) { mStart = null; redrawMeasures(); }
     else if (measuring) btnM.click();
   }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selIds.length &&
-      document.activeElement.tagName !== 'INPUT') {
-    selIds.slice().forEach(delFurniture);
+  var typing = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
+  if ((e.key === 'Delete' || e.key === 'Backspace') && !typing) {
+    if (cabModal.classList.contains('show')) {   // 櫃體編輯頁：Delete 刪選取中的隔板（其次殼板/物品）
+      if (cabF && cabSelP >= 0) { $('cabDelPart').click(); e.preventDefault(); }
+      else if (cabF && cabSelS) { $('cabDelBoard').click(); e.preventDefault(); }
+      else if (cabF && cabSelI >= 0) { $('cabDelItem').click(); e.preventDefault(); }
+      return;
+    }
+    if (selIds.length) selIds.slice().forEach(delFurniture);
   }
-  if ((e.key === 'r' || e.key === 'R') && selIds.length && document.activeElement.tagName !== 'INPUT') {
-    rotateSel();
+  if (cabModal.classList.contains('show')) {   // Modal 開啟：主視圖快捷鍵（R/方向鍵/複製）不作用
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !typing) { cabUndo(); e.preventDefault(); }
+    return;
   }
+  if ((e.key === 'r' || e.key === 'R') && selIds.length && !typing) rotateSel();
   var am = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
-  if (am && selIds.length && document.activeElement.tagName !== 'INPUT' &&
-      !cabModal.classList.contains('show')) {
+  if (am && selIds.length && !typing) {
     e.preventDefault();
     nudgeSel(am[0], am[1]);
   }
-  if ((e.ctrlKey || e.metaKey) && document.activeElement.tagName !== 'INPUT') {
+  if ((e.ctrlKey || e.metaKey) && !typing) {
     if (e.key === 'c' || e.key === 'C') { if (doCopy()) e.preventDefault(); }
     if (e.key === 'v' || e.key === 'V') { if (doPaste()) e.preventDefault(); }
-    if (e.key === 'z' || e.key === 'Z') {   // 櫃體編輯頁開啟中：Ctrl+Z＝櫃體編輯上一步
-      if (cabModal.classList.contains('show')) cabUndo(); else undo();
-      e.preventDefault();
-    }
+    if (e.key === 'z' || e.key === 'Z') { undo(); e.preventDefault(); }
   }
 });
 document.getElementById('btnUndo').addEventListener('click', undo);
@@ -3924,12 +4108,12 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('fColor').value = curColor; $('fColorHex').textContent = curColor;
   setSel(null);
   ck('物件顏色調色盤即時套用', colSync && colApply, '(同步=' + colSync + ', 套用=' + colApply + ')');
-  // 44. 系統內建物件庫：14 種（含洗衣籃/登機箱/隔板），面板按鈕齊全
-  var biGrid = document.getElementById('builtinGrid');
+  // 44. 系統內建物件庫：16 種（含鞋子/管柱/洗衣籃），統一下拉選單（含男女主人）
+  var biSel = document.getElementById('builtinSel');
   var biNames = BUILTINS.map(function (b2) { return b2.name; });
-  ck('內建物件庫14種', BUILTINS.length === 14 && biGrid.querySelectorAll('button').length === 14 &&
-     biNames.indexOf('洗衣籃') !== -1 && biNames.indexOf('登機箱') !== -1 && biNames.indexOf('隔板') !== -1,
-     '(' + biNames.join('/') + ')');
+  ck('內建物件庫16種+統一下拉', BUILTINS.length === 16 && biSel.options.length === 18 &&
+     biNames.indexOf('洗衣籃') !== -1 && biNames.indexOf('鞋子') !== -1 && biNames.indexOf('管柱') !== -1,
+     '(' + biNames.join('/') + '｜options=' + biSel.options.length + ')');
   // 45. 內建物件＝一般物件（可自訂長寬高、受規則）＋3D 多部件外皮
   var bi = addBuiltin('fridge', 200, 760);
   var biDims = bi.skin === 'fridge' && bi.w === 60 && bi.d === 70 && bi.h === 180;
@@ -3943,8 +4127,8 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   ck('內建物件=一般物件+3D外皮', biDims && biSkinOk && biRule, '(faces=' + (biBox ? biBox.children.length : 0) + ')');
   // 46. 內建物件庫不受存檔影響（清除 localStorage 後仍完整）
   try { localStorage.clear(); } catch (e) {}
-  ck('內建物件庫不受存檔影響', document.getElementById('builtinGrid').querySelectorAll('button').length === 14 &&
-     BUILTINS.length === 14);
+  ck('內建物件庫不受存檔影響', document.getElementById('builtinSel').options.length === 18 &&
+     BUILTINS.length === 16);
   // 47. 懸浮功能列（人物無櫃體鈕）＋櫃體 Modal 開啟（空心殼 5 板、預設隔板厚 2）
   setSel(pm.id); syncPanel();
   var personNoCab = document.getElementById('btnCabOpen').style.display === 'none';
@@ -3999,6 +4183,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
      '(clamp=' + posHi + '/' + posLo + ', 重疊紅=' + posLap + ', faces=' + (biBox2 ? biBox2.children.length : 0) + ')');
   // 50. 櫃內物品：與內徑/隔板距離、拖放落於隔板頂、放不下偵測（可行性）；新增前須先選放置格
   cabSelCell = { xi: 0, zi: 0 };   // 底格（放置格規則：新增物品需先選格）
+  $('ciAddW').value = 22.4; $('ciAddD').value = 30; $('ciAddH').value = 30;   // 尺寸＝UI 輸入當下值
   $('cabAddItem').click();
   var it0 = bi.cab.items[0];   // 22.4×30×30 @x28,y34,z0
   var dd0 = cabItemDists(bi, it0);
@@ -4293,6 +4478,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var innA66 = cabInner(cb66);
   var all66 = Math.abs(innA66.ih - 100) < 0.01 && Math.abs(innA66.iw - 80) < 0.01 && hasCab(cb66);
   $('cabAddKind').value = 'luggage';                  // 內建物件（行李箱 50×32×75）放入櫃內＝檯面下模擬
+  $('cabAddKind').dispatchEvent(new Event('change'));  // 選種類→自動帶入預設尺寸到輸入框
   cabSelCell = { xi: 0, zi: 0 };                      // 唯一放置格（新增規則：先選格）
   $('cabAddItem').click();
   $('cabAddKind').value = '';
@@ -4401,13 +4587,16 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   setSel(pc71.id); refreshAll(); openCab(pc71);
   $('cabAddH').click();                                // 1 片 @48（ih=96）→ 底格 76寬×47高×38深
   $('cabAddKind').value = '';
+  $('ciAddW').value = 30; $('ciAddD').value = 19; $('ciAddH').value = 28.8;
   $('cabAddItem').click();
   var a71 = pc71.cab.items.length === 0 && $('hint').textContent.indexOf('放置格') !== -1;   // 未選格 → 拒絕
   cabSelCell = { xi: 0, zi: 0 }; syncCabPanel();
   $('cabAddKind').value = 'wardrobe';                  // 250×60×240 尺寸超格 → 拒絕
+  $('cabAddKind').dispatchEvent(new Event('change'));
   $('cabAddItem').click();
   var b71 = pc71.cab.items.length === 0;
   $('cabAddKind').value = '';                          // 自訂 30×19×28.8 → 可新增（格中央）
+  $('ciAddW').value = 30; $('ciAddD').value = 19; $('ciAddH').value = 28.8;
   $('cabAddItem').click();
   var it71 = pc71.cab.items[0];
   var c71 = pc71.cab.items.length === 1 && Math.abs(it71.x - 38) < 0.01 && it71.z === 0;
@@ -4417,6 +4606,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('ciH').value = 45; $('ciH').dispatchEvent(new Event('input'));
   var d71 = !cabItemBad(pc71, it71);
   $('cabAddKind').value = 'trash';                     // 30×30×40：尺寸放得下、體積 36000 > 剩 22336 → 拒絕
+  $('cabAddKind').dispatchEvent(new Event('change'));
   $('cabAddItem').click();
   var e71 = pc71.cab.items.length === 1 && $('hint').textContent.indexOf('體積不足') !== -1;
   $('cabAddKind').value = '';
@@ -4427,6 +4617,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   cabSelI = -1; cabSelP = -1; renderCab(); syncCabPanel();
   cabSelCell = { xi: 0, zi: 0 };
   $('cabAddKind').value = 'trash';                     // 30×30×40 兩件 → 並排平均間隔
+  $('cabAddKind').dispatchEvent(new Event('change'));
   $('cabAddItem').click();
   $('cabAddItem').click();
   var t72a = pc71.cab.items[0], t72b = pc71.cab.items[1];
@@ -4435,6 +4626,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
              Math.abs(Math.min(t72a.x, t72b.x) - (gap72 + 15)) < 0.11 &&
              Math.abs(Math.max(t72a.x, t72b.x) - (gap72 * 2 + 45)) < 0.11;
   $('cabAddKind').value = 'projector';                 // 35×26×12（體積最小）：併排 95>76 → 堆疊、最小在頂
+  $('cabAddKind').dispatchEvent(new Event('change'));
   $('cabAddItem').click();
   $('cabAddKind').value = '';
   var pj72 = pc71.cab.items[2];
@@ -4446,19 +4638,151 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   delFurniture(pc71.id); setSel(null);
   ck('同格自動排列(平均間隔/堆疊大者在下)', ev72 && st72,
      '(並排x=' + r1(t72a.x) + '/' + r1(t72b.x) + ', 疊z=' + zs72 + ')');
+  // 73. 統一下拉選單新增（含人物）＋鞋子預設腳長 24cm
+  var n73 = furniture.length;
+  $('builtinSel').value = 'shoes'; $('btnAddBuiltin').click();
+  var sh73 = furniture[furniture.length - 1];
+  var shoeOk = sh73.skin === 'shoes' && sh73.w === 24 && sh73.d === 10 && sh73.h === 9 && sh73.z === 0;
+  setMode(true);
+  var shBox = boxHost.querySelector('[data-bid="' + sh73.id + '"]');
+  var shSkin = shBox && shBox.children.length === 18;   // 鞋底+鞋頭+鞋口＝3 部件×6 面
+  setMode(false);
+  $('builtinSel').value = 'person:f'; $('btnAddBuiltin').click();
+  var pf73 = furniture[furniture.length - 1];
+  var perOk = isPerson(pf73) && pf73.h === 154 && pf73.weight === 48;
+  delFurniture(pf73.id); delFurniture(sh73.id);
+  $('builtinSel').value = 'table'; $('builtinSel').dispatchEvent(new Event('change'));
+  ck('下拉選單新增(含人物)+鞋子腳長24', shoeOk && shSkin && perOk && furniture.length === n73,
+     '(鞋 ' + sh73.w + '×' + sh73.d + '×' + sh73.h + ', 部件面=' + (shBox ? shBox.children.length : 0) + ')');
+  // 74. 管柱（直/L/U）：部件形狀正確、可即時換型式；一端可固定即釘住（頂天花板／側貼牆皆保持高度）
+  var keepF74 = furniture;
+  furniture = []; setSel(null);
+  $('builtinSel').value = 'pipe'; $('builtinSel').dispatchEvent(new Event('change'));
+  var pipeUI = $('pipeWrap').style.display !== 'none';
+  $('fPipe').value = 'L';
+  var pp74 = addBuiltin('pipe', 272, 800);
+  var lOk = pp74.pipe === 'L' && pipeParts(pp74).length === 2 &&
+            Math.abs(pipeParts(pp74)[0].bw - pp74.w) < 0.01 &&        // 頂部橫段跨全長
+            Math.abs(pipeParts(pp74)[1].bh - (pp74.h - pp74.pipeT)) < 0.01;   // 端部垂直段
+  setSel(pp74.id); syncPanel();
+  var uiSync74 = $('fPipe').value === 'L' && +$('fPipeT').value === PIPE_T;
+  $('fPipe').value = 'U'; $('fPipe').dispatchEvent(new Event('input'));
+  var uOk = pp74.pipe === 'U' && pipeParts(pp74).length === 3;
+  setMode(true);
+  var pBox = boxHost.querySelector('[data-bid="' + pp74.id + '"]');
+  var pFaces = pBox && pBox.children.length === 3 * 6;
+  setMode(false);
+  $('fPipe').value = 'I'; $('fPipe').dispatchEvent(new Event('input'));
+  var iOk = pipeParts(pp74).length === 1;
+  $('fPipe').value = 'L'; $('fPipe').dispatchEvent(new Event('input'));
+  pp74.z = CEIL - pp74.h; settleGravity();
+  var ceilFix = Math.abs(pp74.z - (CEIL - pp74.h)) < 0.01 && ceilTouch(pp74);   // 頂端固定於天花板
+  pp74.z = 180; pp74.x = 130 + pp74.w / 2; pp74.y = 800; settleGravity();
+  var wallFix = pp74.z === 180 && wallTouch(pp74);                              // 側端釘牆
+  pp74.x = 272; pp74.z = 180; settleGravity();
+  var fallOk = pp74.z === 0;                                                    // 兩端皆無支點 → 落地
+  delFurniture(pp74.id);
+  furniture = keepF74; setSel(null); refreshAll();
+  ck('管柱直/L/U+一端固定(天花板/牆)', pipeUI && lOk && uiSync74 && uOk && pFaces && iOk && ceilFix && wallFix && fallOk,
+     '(L段=' + lOk + ', U段=' + uOk + ', 頂固定=' + ceilFix + ', 釘牆=' + wallFix + ', 無支點落地=' + fallOk + ')');
+  // 75. 天花板區：高度輸入移入天花板區＋顯示/隱藏切換（3D 半透明平面、位於 CEIL 高度、不擋點擊）
+  setMode(true);
+  var cpEl = $('ceilPlane');
+  var hidden75 = cpEl.style.display === 'none' || !cpEl.style.display;
+  $('btnCeilShow').click();
+  var shown75 = cpEl.style.display === 'block' && cpEl.style.transform.indexOf(CEIL + 'px') !== -1 &&
+                getComputedStyle(cpEl).pointerEvents === 'none' &&
+                !!vgHost.querySelector('.ceillbl') &&
+                vgHost.querySelector('.ceillbl').textContent.indexOf('天花板 ' + CEIL) !== -1;
+  $('fCeil').value = 300; $('fCeil').dispatchEvent(new Event('change'));
+  var follow75 = CEIL === 300 && cpEl.style.transform.indexOf('300px') !== -1;
+  $('fCeil').value = 280; $('fCeil').dispatchEvent(new Event('change'));
+  $('btnCeilShow').click();
+  var off75 = cpEl.style.display === 'none' && CEIL === 280;
+  setMode(false);
+  ck('天花板顯示切換+高度移入天花板區', hidden75 && shown75 && follow75 && off75,
+     '(顯示=' + shown75 + ', 跟隨高度=' + follow75 + ', 隱藏=' + off75 + ')');
+  // 76. 備註：物件備註（面板即時套用、存檔往返、清單/3D 標記）＋櫃體備註（存於 cab.note）
+  var nb76 = addFurniture({ name: '備註測試', w: 40, d: 40, h: 40, x: 272, y: 800, rot: 0, color: '#607d8b' });
+  setSel(nb76.id); syncPanel();
+  $('fNote').value = '訂製・需留插座'; $('fNote').dispatchEvent(new Event('input'));
+  var note76 = nb76.note === '訂製・需留插座';
+  var snap76 = null;
+  try { snap76 = JSON.parse(localStorage.getItem('a2home_v1')); } catch (e) {}
+  var keepNote76 = !!(snap76 && snap76.furniture.filter(function (o) { return o.id === nb76.id; })[0].note === '訂製・需留插座');
+  setMode(true);
+  var lbl76 = boxHost.querySelector('[data-bid="' + nb76.id + '"]') &&
+              Array.prototype.some.call(boxHost.querySelectorAll('.name3'), function (t) { return t.textContent.indexOf('📝') !== -1; });
+  setMode(false);
+  openCab(nb76);
+  $('cabNote').value = '層板可調'; $('cabNote').dispatchEvent(new Event('input'));
+  var cnote76 = nb76.cab.note === '層板可調' && hasCab(nb76);
+  $('cabClose').click();
+  var cnKeep76 = hasCab(nb76) && nb76.cab.note === '層板可調';
+  delFurniture(nb76.id); setSel(null);
+  ck('備註(物件/櫃體)+存檔+標記', note76 && keepNote76 && lbl76 && cnote76 && cnKeep76,
+     '(物件=' + note76 + ', 存檔=' + keepNote76 + ', 標記=' + lbl76 + ', 櫃體=' + cnKeep76 + ')');
+  // 77. 放置物品尺寸＝UI 輸入當下值（選內建種類自動帶入預設值、仍可自行改）
+  var ui77 = addFurniture({ name: 'UI尺寸櫃', w: 90, d: 45, h: 120, x: 520, y: 900, rot: 0, color: '#795548' });
+  setSel(ui77.id); refreshAll(); openCab(ui77);
+  cabSelCell = { xi: 0, zi: 0 }; syncCabPanel();
+  $('cabAddKind').value = '';
+  $('ciAddW').value = 12; $('ciAddD').value = 13; $('ciAddH').value = 14;
+  $('cabAddItem').click();
+  var c77 = ui77.cab.items[0];
+  var custom77 = c77 && c77.w === 12 && c77.d === 13 && c77.h === 14;
+  $('cabAddKind').value = 'shoes'; $('cabAddKind').dispatchEvent(new Event('change'));
+  var fill77 = +$('ciAddW').value === 24 && +$('ciAddD').value === 10 && +$('ciAddH').value === 9;
+  $('ciAddH').value = 15;                                  // 使用者再自行改高 → 新增須用改後值
+  $('cabAddItem').click();
+  var s77 = ui77.cab.items[ui77.cab.items.length - 1];
+  var edited77 = s77.skin === 'shoes' && s77.w === 24 && s77.h === 15;
+  $('cabAddKind').value = '';
+  ck('放置物品尺寸=UI輸入值(內建自動帶入可再改)', custom77 && fill77 && edited77,
+     '(自訂=' + (c77 ? c77.w + '×' + c77.d + '×' + c77.h : 'X') + ', 帶入=' + fill77 + ', 改後=' + (s77 ? s77.w + '×' + s77.h : 'X') + ')');
+  // 78. Modal 右上工具列（↩/✔/✕）＋點 Modal 外不關閉＋Delete 刪隔板＋✕ 取消還原本次編輯
+  var tools78 = $('cabTools') && $('cabTools').contains($('cabUndoBtn')) &&
+                $('cabTools').contains($('cabClose')) && $('cabTools').contains($('cabCancel')) &&
+                cabViewEl.contains($('cabTools'));
+  cabModal.dispatchEvent(new MouseEvent('click', { bubbles: true }));   // 點 Modal 外：不再關閉
+  var stay78 = cabModal.classList.contains('show') && cabF === ui77;
+  $('cabAddH').click(); $('cabAddH').click();
+  var np78 = ui77.cab.parts.length;
+  cabSelP = 0; cabSelI = -1; cabSelS = null; syncCabPanel();
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+  var del78 = ui77.cab.parts.length === np78 - 1;                        // Delete 鍵刪隔板
+  $('cabCancel').click();                                               // ✕ 取消：放棄本次全部編輯
+  var cancel78 = !cabModal.classList.contains('show') && !hasCab(ui77);  // 回到開啟前（無櫃體內容）
+  delFurniture(ui77.id); setSel(null);
+  ck('Modal右上工具列+外點不關+Delete刪隔板+取消還原',
+     tools78 && stay78 && del78 && cancel78,
+     '(工具列=' + tools78 + ', 外點不關=' + stay78 + ', Delete=' + del78 + ', 取消還原=' + cancel78 + ')');
+  $('builtinSel').value = 'table'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
+  $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();
   var st = q.get('st') || '';
   if (st === 'light') $('btnTheme').click();
   if (st === 'wood') $('btnThemeWood').click();
   if (st === 'grid') $('btnGrid').click();
   if (st === '3d') { setMode(true); cam.rz = 25; cam.rx = 60; applyCam(); }
+  if (st === 'ceil') {   // 天花板顯示＋管柱（L/U）貼天花板的實景檢視
+    $('fPipe').value = 'L';
+    var pL = addBuiltin('pipe', 300, 700); pL.w = 150; pL.h = 90; pL.z = CEIL - pL.h;
+    $('fPipe').value = 'U';
+    var pU = addBuiltin('pipe', 300, 560); pU.w = 120; pU.h = 70; pU.z = CEIL - pU.h;
+    settleGravity();
+    setMode(true); cam.rz = 18; cam.rx = 66; applyCam();
+    $('btnCeilShow').click();
+    setSel(null); refreshAll();
+    cam.s *= 1.7; cam.py += 120; applyCam();   // 拉近看管柱與天花板關係
+  }
   if (st === 'panel') { panel.classList.add('open'); $('btnPanel').classList.add('active'); }   // 面板已預設開啟
   if (st === 'sel') { setSel(furniture[0].id); refreshAll(); }
   if (st === 'tut') openTut();
   if (st === 'ver') { saveVersion('示範配置'); $('btnVer').click(); }
   if (st === 'cab') { setSel(bi.id); refreshAll(); openCab(bi); cabSelI = 0; renderCab(); syncCabPanel(); }
   var badge = document.getElementById('selftestBadge');
-  badge.style.display = 'block';
+  badge.style.display = q.get('nb') ? 'none' : 'block';   // nb=1：隱藏清單（供人工檢視畫面用）
   badge.style.color = pass ? '#0f0' : '#f44';
   badge.textContent = out.join('\n');
   document.title = (pass ? 'ST-PASS' : 'ST-FAIL');

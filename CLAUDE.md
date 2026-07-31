@@ -11,7 +11,7 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 72 項）。自測不可只靠截圖：必須含真實
+**新功能必須同步新增對應斷言**（selftest 目前 78 項）。自測不可只靠截圖：必須含真實
 PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類（含 14 種內建物件全規則掃描）。
 **測試路徑要含對角/牆角等非軸向情境**（曾因只測軸向漏掉「對角逼近牆角整步退回卡住」的滑動 Bug）。
 
@@ -20,7 +20,7 @@ PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類�
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **72 項全 PASS**；有新功能先補斷言再回到步驟 3。
+4. headless Chrome 跑 `?selftest=1` → **78 項全 PASS**；有新功能先補斷言再回到步驟 3。
    注意：此機 Chrome 150 `--dump-dom` 無輸出，驗證用高視窗截圖（--window-size=1100,1500）讀 badge。
 5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood / st=cab），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
@@ -62,7 +62,10 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   settleGravity 先錨定（底=地板、側貼牆 wallTouch、頂=天花板 ceilTouch），再與已支撐物件面接觸連鎖
   （objContact BFS），其餘由低到高落至最高支撐面；拖曳中貼牆/頂天花板亦保持高度（dragTo）。
   拖曳下方物件整疊連動（beginCarry 遞迴）。
-- 天花板上限預設 280cm（面板可調），超高整件變紅並退回。
+- **天花板（面板獨立「天花板」區）**：高度預設 280cm（#fCeil，移出物件區），超高整件變紅並退回；
+  **「顯示天花板」可切換 3D 極半透明平面 #ceilPlane**（z=CEIL、pointer-events:none 不擋點擊、
+  附 billboard 標籤「天花板 N cm」於 #vgHost；updateCeilPlane 由 setMode/refreshAll/高度變更呼叫）。
+  物件釘天花板能力＝臨邊支點規則之 ceilTouch（頂到 CEIL ±0.25cm 即固定，settleGravity/dragTo 皆有）。
 - 懸停尺標＝水平四向距離（2D/3D、含物件距離、距門口）＋**垂直臨近兩點距離（僅 3D＝非正俯瞰視角）**：
   懸停物件→頂面↑至上方物件底/天花板、底面↓至下方物件頂/地板；懸停平面→該點↑至上方物件底/天花板。
   實作：updateVGuides→#vgHost（獨立於 boxHost，rebuild 不清除）、.vg-line 世界垂直線僅繞 z 反轉面向鏡頭、
@@ -73,11 +76,20 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   **主題只變更 bgRect（平面圖底）；平面圖以外（stage/scene3d 背景）固定黑色**，
   因此外徑鏈（edim，畫在圖外）恆用亮色不隨主題。**st=light 依賴白色預設按鈕 id=btnTheme，勿改 id**。
 - 物件顏色＝調色盤（#fColor input type=color，取代舊 16 色格）：選取物件即時套用、面板同步顯示 hex。
-- **系統內建物件 14 種**（BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
-  小餐邊推車/垃圾桶/投影機/洗衣籃；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
+- **備註**：物件 f.note（面板 #fNote textarea）與櫃體 f.cab.note（Modal #cabNote）皆為自由文字，
+  隨存檔/匯出/複製；清單以 title 顯示、名稱後加 📝，3D 名稱標籤亦加 📝。hasCab 含 note。
+- **系統內建物件 16 種**（BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
+  小餐邊推車/垃圾桶/投影機/洗衣籃/**鞋子 24×10×9（腳長 24cm）**/**管柱 120×8×60**；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
   改用 60×70×180；**鞋櫃 2026-07-31 依使用者指定改 64×32×200**）：內建於程式、不受存檔影響；
   **本質＝一般物件**（可自訂長寬高、受全部物件規則）；
   3D 以 SKIN3D 多部件外皮呈現（比例縮放）。**正面＝+y（預設視角近側）**：門面/櫃體開口/沙發座向皆同。
+  **面板改為統一下拉選單 #builtinSel＋「➕ 加入」**（物件已多；含男/女主人 person:m|f，共 18 個 option，
+  舊 #builtinGrid/btnMan/btnWoman 已移除）。
+- **管柱（k=pipe）**：f.pipe='I'|'L'|'U'（面板 #fPipe）＋管徑 f.pipeT（#fPipeT，預設 PIPE_T=8）；
+  pipeParts(f) 推導部件——**直＝沿最長邊一根（w≥h 為水平貼頂、否則垂直）、L＝頂部橫段＋一端垂直段、
+  U＝頂部橫段＋兩端垂直段**（依使用者提供的天花板轉折方管照片）；3D 走 SKIN3D.pipe、2D 俯視畫實際管段投影。
+  **碰撞/磁吸仍用整體 OBB**（與所有既有物件規則一致）；固定方式＝臨邊支點：只要一端貼天花板或牆即釘住，
+  兩端皆無支點才落地。
   **匯入/載入存檔/還原版本時，名稱同內建物件者自動換皮（applySkins）——已有櫃體修改（hasCab）者除外**。
   **內建物件只要有櫃體修改儲存（closeCab 時 hasCab 為真）→ delete f.skin，外觀改為櫃體殼板**（2026-07-31
   改版，取代舊「SKIN_INNER 桌子保留外皮」機制——SKIN_INNER 已整個移除，所有物件進櫃體編輯一律殼板模型）。
@@ -99,7 +111,13 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   **板材顏色/材質**：每片殼板（cab.sc[key]）與隔板（p.color/p.mat）可各自設定顏色＋特別材質——
   **玻璃 glass＝半透明 rgba 0.32（無自訂色時預設 #8ecae6）、洞洞板 peg＝radial-gradient 圓洞紋**
   （boardFill/cabShellFill；Modal、主視圖 3D、2D 俯視同步；CSS background 可含漸層層）。
-  **放置物品可選內建物件**（#cabAddKind 下拉：自訂＋14 種；item 帶 skin 以外皮渲染於 Modal 與主 3D）。
+  **放置物品可選內建物件**（#cabAddKind 下拉：自訂＋16 種；item 帶 skin 以外皮渲染於 Modal 與主 3D）；
+  **尺寸一律取側欄輸入框當下值（#ciAddW/D/H＋#ciAddColor）**——選內建種類只是把其預設尺寸帶入輸入框
+  （change 事件；測試若直接設 value 需自行 dispatch change），使用者可再改。
+  **Modal 右上角工具列 #cabTools（位於 #cabView 內）：↩ 上一步／✔ 完成儲存（closeCab）／✕ 取消（cancelCab
+  ＝回到 cabHist[0] 開啟當下狀態並關閉）**；**點擊 Modal 外不再關閉**（已移除背景 click 關閉，避免誤觸遺失編輯）；
+  **Delete 鍵刪選取中的隔板**（其次殼板→物品）；Modal 開啟時主視圖快捷鍵（R/方向鍵/Ctrl+C/V）一律不作用。
+  櫃體備註 f.cab.note（#cabNote）。
   **放置物品新增規則（2026-07-31）**：須先點擊櫃內空白格選取「放置格」（cabCells＝隔板切出的網格、
   綠虛線高亮、cabSelCell 存 {xi,zi} 索引），且 cabCellCheck 過關（尺寸放得進格＋體積 ≤ 格剩餘體積＝
   格空間−已放物品體積和），否則拒絕新增；**同格已有物品自動排列 cabArrangeCell**：可並排（Σ寬≤格寬）
