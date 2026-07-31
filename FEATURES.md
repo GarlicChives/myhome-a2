@@ -64,7 +64,18 @@
 
 - 2026-08-01 新增廚房家電 4 種：**大同電鍋 32×32×30**（cooker，經典綠，鍋身+上蓋+蓋鈕外皮）、
   **烘碗機 45×35×25**（dishdryer）、**烤箱 54×42×33**（oven）、**微波爐 51×40×30**（microwave）——
-  後三者共用 applianceSkin（本體+前門面板+把手）。#builtinSel 共 23 options。
+  後三者共用 applianceSkin（本體+前門面板+把手）。另 **全罩式安全帽 34×26×27**（helmet，帽體+鏡片）、
+  **電視 112×7×65＝50 吋壁掛**（tv，外框+螢幕；A2 沙發→主臥隔間牆視距 ~263cm 適配，已依實測放入譁.json
+  x496.5/y708/z90/rot90 貼牆）。**鞋子改一雙 24×20×9**（兩隻並排 6 部件）。共 22 種、#builtinSel 25 options。
+
+## 管柱掛件（f.hang）
+
+- selBar 對管柱顯示「🪝 掛件」（btnHangOpen；🗄 櫃體隱藏、openCab 對 pipe 直接 return）。
+- #hangModal＝吊桿 1D 檢視（HANG_S px/cm 映射）：HANG_KINDS 衣服 30×42/外套 42×62/廚具 8×30/鍋子 26×16；
+  掛上=掃描首個不重疊位置；左右拖曳（document pointermove/up）；**覆蓋其他掛件＝調換位置**
+  （中心/左緣/右緣三候選＋hangClamp 夾限，皆敗退回）。3D 主視圖 SKIN3D.pipe 依 hangBarInfo
+  （水平橫段底部 z；pipeUp 時橫段在底、垂直直管無吊桿）渲染掛件頂端貼吊桿。
+- f.hang 隨 addFurniture/copy/dup/匯出存檔完整傳遞。
 
 - BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
   小餐邊推車/垃圾桶/投影機/洗衣籃/**鞋子 24×10×9（腳長 24cm）**/**管柱 150×3.4×45**；
