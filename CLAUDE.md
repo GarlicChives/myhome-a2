@@ -11,7 +11,7 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 82 項）。自測不可只靠截圖：必須含真實
+**新功能必須同步新增對應斷言**（selftest 目前 89 項）。自測不可只靠截圖：必須含真實
 PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類（含內建物件全規則掃描）。
 **測試路徑要含對角/牆角等非軸向情境**（曾因只測軸向漏掉「對角逼近牆角整步退回卡住」的滑動 Bug）。
 
@@ -81,9 +81,12 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 ## 功能索引（規格細節→FEATURES.md 同名節）
 
 物件基本規則（磁吸/堆疊/滑動）｜臨邊支點規則｜天花板｜懸停尺標｜主題｜物件顏色｜備註｜
-系統內建物件（16 種＋人物）｜管柱（預設 L、新增即釘天花板、#9aa3ad、管徑 3.4=25A）｜匯入換皮規則｜
-上一步復原（主視圖＋櫃體 Modal 各自獨立）｜選取懸浮功能列｜櫃體編輯 Modal（殼板/隔板/放置格/材質）｜
-多選複製｜平移（左+右鍵）｜鍵盤微調 0.5cm｜尺寸標註/3D billboard｜教學 Modal｜版本管理｜
+系統內建物件（16 種＋人物；統一下拉＝唯一新增入口，選取自動帶入表單）｜
+管柱（預設 L、新增即釘天花板、#9aa3ad、管徑 3.4=25A）｜匯入換皮規則｜
+上一步/下一步（Ctrl+Z 復原、Ctrl+Y 重做；主視圖＋櫃體 Modal 各自獨立）｜垂直旋轉（寬↔高互換、V 鍵）｜
+選取懸浮功能列（3D 顯示於整疊最高點上方）｜3D 直接操作（Alt+拖曳離地、PgUp/PgDn、薄件隱形把手）｜
+櫃體編輯 Modal（殼板/隔板/放置格/材質）｜多選複製｜平移（左+右鍵）｜鍵盤微調 0.5cm｜
+尺寸標註/3D billboard｜教學 Modal｜版本管理/匯出匯入（完整狀態含天花板）｜
 高度上限=天花板｜流理台障礙｜門口 DOORS｜人物。
 未特別提及時，需求主要針對 3D 檢視（2D 同步但非重點）。
 
@@ -108,6 +111,12 @@ GitHub Pages **https://garlicchives.github.io/myhome-a2/**（repo：GarlicChives
 
 ## 陷阱（踩過的坑）
 
+- **selftest 以 pev 派發指標事件前，必須「當下」重新查詢目標節點**：addFurniture/refreshAll 會
+  rebuildBoxes 整個重建 boxHost，先前抓的元素已脫離文件 → 事件不冒泡、靜默失敗（drag3F 不會設）。
+- **Claude in Chrome javascript_tool 注入一律包 IIFE**：頂層 `var el=...` 會蓋掉頁面全域函式
+  （曾蓋掉 `el()` 造成 redrawFurniture2d 拋例外，誤判為產品 Bug 追了半小時）。
+- **實機 computer 工具座標＝截圖座標（1568 寬），頁面 CSS 寬 1920 → 換算 ×(1568/1920)**；
+  CDP 合成 scroll 不會觸發頁面 wheel 縮放（要測縮放用 JS 派發 WheelEvent）。
 - **Modal 內的按鈕若放在會 setPointerCapture 的 3D 區（#cabView）內，click 會被攔截 → 按鈕完全沒反應**：
   cabView 的 pointerdown 必須先 `if (e.target.closest('#cabTools')) return;` 才不會捕獲指標。
   **教訓：自測點按鈕不可只用 `el.click()`（會略過指標路徑而假 PASS），必須送 pointerdown→pointerup→click

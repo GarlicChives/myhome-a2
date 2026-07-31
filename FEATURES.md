@@ -60,8 +60,11 @@
   **鞋櫃 2026-07-31 依使用者指定改 64×32×200**：內建於程式、不受存檔影響；
   **本質＝一般物件**（可自訂長寬高、受全部物件規則）；
   3D 以 SKIN3D 多部件外皮呈現（比例縮放）。**正面＝+y（預設視角近側）**：門面/櫃體開口/沙發座向皆同。
-  **面板為統一下拉選單 #builtinSel＋「➕ 加入」**（含男/女主人 person:m|f，共 18 個 option，
-  舊 #builtinGrid/btnMan/btnWoman 已移除）。
+  **面板為統一下拉選單 #builtinSel＝唯一新增入口**（2026-07-31 改版：舊「➕ 加入」btnAddBuiltin 已移除，
+  雙新增按鈕造成困惑）：option 首項 custom「✏️ 自訂物件」（預設），加男/女主人 person:m|f＋16 種內建，
+  共 **19 個 option**。**change 時自動帶入表單**（名稱/長寬高/顏色；管柱另帶 z=CEIL−h 釘頂、人物 z=0）
+  並 setSel(null) 進入新增模式；單一「➕ 新增」btnAdd 讀表單＋依下拉值附加 metadata
+  （person→kind/weight、pipe→f.pipe/f.pipeT、內建→skin、custom→無）。addBuiltin(k,x,y)/addPerson 保留供程式呼叫。
 
 ## 管柱（k=pipe）
 
@@ -80,18 +83,38 @@
 - **內建物件只要有櫃體修改儲存（closeCab 時 hasCab 為真）→ delete f.skin，外觀改為櫃體殼板**（2026-07-31
   改版，取代舊「SKIN_INNER 桌子保留外皮」機制——SKIN_INNER 已整個移除，所有物件進櫃體編輯一律殼板模型）。
 
-## 上一步（復原）
+## 上一步／下一步（復原/重做）
 
-- histStack（saveState→pushHistory 去重、上限 100）、Ctrl+Z 或 header「↩ 復原」；
-  undo 以快照整批替換 furniture（**測試中 undo 後所有物件參照需 byId 重綁**）。
+- histStack＋histRedo（saveState→pushHistory 去重、上限 100；**push 新狀態時清空 histRedo**）、
+  Ctrl+Z／「↩ 復原」＝undo（目前快照移入 histRedo）、Ctrl+Y 或 Ctrl+Shift+Z／「↪ 重做」＝redo；
+  undo/redo 共用 applyHistSnapshot 整批替換 furniture（**測試中 undo 後所有物件參照需 byId 重綁**）。
   **櫃體編輯 Modal 開啟中 pushHistory 凍結**：closeCab 後 refreshAll 記一步 → 主視圖「復原」＝整段櫃體
-  編輯一步退回（外皮/cab 一起還原）。**Modal 內自有上一步 cabHist/cabPush/cabUndo**（↩ 上一步鈕；
-  Ctrl+Z 於 Modal 開啟時路由至 cabUndo）；cabCommit()＝renderCab+syncCabPanel+refreshAll+cabPush，
-  Modal 內所有完成操作走它。
+  編輯一步退回（外皮/cab 一起還原）。**Modal 內自有 cabHist/cabRedoStack/cabPush/cabUndo/cabRedo**
+  （↩ 上一步／↪ 下一步鈕；Ctrl+Z / Ctrl+Y 於 Modal 開啟時路由至 cabUndo/cabRedo；openCab 時兩堆疊歸零）；
+  cabCommit()＝renderCab+syncCabPanel+refreshAll+cabPush，Modal 內所有完成操作走它。
+
+## 垂直旋轉（rotateVertSel）
+
+- **寬(d)↔高(h) 互換＝物件立起/倒下**；搭配水平 90° 可達全部軸向朝向。z 不動、refreshAll 的
+  settleGravity 自動落回支撐面；旋轉後與牆/家具重疊或超天花板→紅框警示（不強制擋，與水平 90° 一致）。
+- 入口：面板「⤵ 垂直90°」btnRotV（未選取＝互換表單 fD/fH，作用於下次新增）、懸浮列「⤵ 立倒」btnBarRotV、
+  V 鍵（無 Ctrl、選取中）。**人物／管柱／已編輯櫃體（hasCab）不支援**（櫃體內部座標依附 w/d/h 會毀損），
+  多選時僅套用支援者並提示。
 
 ## 選取懸浮功能列
 
-- #selBar（單選時顯示於物件上方）：🗄 櫃體／⟳90°／⧉ 複製／🗑 刪除（人物無櫃體鈕）。
+- #selBar（單選時顯示於物件上方）：🗄 櫃體／⟳90°／⤵ 立倒／⧉ 複製／🗑 刪除（人物無櫃體鈕）。
+- **3D 顯示位置＝「整疊最高點」上方 46px**（掃 obbOverlap 之非人物物件取 max(z+h)）：
+  否則功能列會蓋住疊放在選取物件上方的物件，人要抓上層物件會點到工具列（實機驗證踩到的坑）。
+
+## 3D 直接操作（離地／薄件把手）
+
+- **Alt+拖曳＝垂直調整離地**：pointermove 中 altKey 時 dz=−dy/(cam.s·sin rx)、0.5cm 對齊、
+  clamp [0, CEIL−h]，dragCarry 整疊連動；放開後 settleMoved 依臨邊支點規則落定（無支點落回）。
+- **PgUp/PgDn＝離地 ±0.5cm**（選取中、非人物；refreshAll 內 settleGravity 把關：貼牆/釘頂有支點才停留）。
+- **薄件隱形抓取把手**：任一維 <12cm 的物件（管柱 3.4cm 螢幕僅 ~4px 幾乎點不到）rebuildBoxes 時
+  附加 6 面透明 hitbox（class hitfc、opacity 0、外層 box3d 帶 data-bid）→ 指標互動用 bounding box，
+  不影響碰撞/尺寸/渲染；人物與厚物件不加。**測試注意：add 會 rebuildBoxes，pev 前須重新查詢節點**。
 
 ## 櫃體編輯 Modal
 
@@ -159,9 +182,13 @@
 - 首次進站自動彈出（今日不再顯示存 localStorage 當日字串）、Header「❓ 教學」可重開；
   `?selftest=1` 時不自動彈出（st=tut 例外）。
 
-## 版本管理
+## 版本管理／匯出匯入（完整狀態）
 
 - 「💾 版本」：localStorage 多版本另存/還原/刪除（上限 30）；配置隨時自動儲存（重開機續編）。
+- **儲存完整性（2026-07-31 使用者要求）**：版本與匯出 JSON 皆含 furniture 全欄位（旋轉/離地堆疊/
+  管柱 pipe+pipeT/櫃體 cab 隔板+物品+材質/備註/人物/skin）＋measures＋**ceil 天花板高度**（釘頂管柱依賴）。
+  匯出走 exportPayload()、匯入走 importState()（FileReader 與 selftest 深度往返共用同一路徑；
+  斷言＝匯出→清空→匯入 JSON.stringify 位元級一致）。
 
 ## 高度上限＝天花板
 
