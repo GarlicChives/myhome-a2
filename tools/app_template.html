@@ -325,7 +325,7 @@
         <div><label style="visibility:hidden">.</label>
           <div style="display:flex;gap:6px">
             <button id="btnRot90" title="水平旋轉90°" style="flex:1">⟳ 水平90°</button>
-            <button id="btnRotV" title="垂直旋轉90°：寬↔高互換（物件立起/倒下）；管柱＝長↔高互換（橫吊管⇄立管）；人物/已編輯櫃體不支援" style="flex:1">⤵ 垂直90°</button>
+            <button id="btnRotV" title="垂直旋轉90°：寬↔高互換（物件立起/倒下）；管柱＝翻轉 L/U 方向（頂橫段下牆⇄底橫段吊桿釘頂）；人物/已編輯櫃體不支援" style="flex:1">⤵ 垂直90°</button>
           </div>
         </div>
       </div>
@@ -1437,7 +1437,7 @@ function addFurniture(o) {
   if (o.weight) f.weight = o.weight;
   if (o.skin) f.skin = o.skin;                                   // 內建物件 3D 外觀
   if (o.note) f.note = o.note;                                   // 備註（自由文字）
-  if (o.pipe) { f.pipe = o.pipe; f.pipeT = o.pipeT || PIPE_T; }  // 管柱型式／管徑
+  if (o.pipe) { f.pipe = o.pipe; f.pipeT = o.pipeT || PIPE_T; if (o.pipeUp) f.pipeUp = true; }  // 管柱型式／管徑／翻轉向上
   if (o.cab) f.cab = JSON.parse(JSON.stringify(o.cab));          // 櫃體資料（隔板/物品）
   if (isPerson(f)) f.z = 0;   // 人物不可離地
   if (f.z + f.h > CEIL) {   // 新增高度不可超過天花板
@@ -1491,7 +1491,8 @@ function rotateSel() {
   return true;
 }
 // 垂直旋轉90°：一般物件＝寬(d)↔高(h) 互換（向前立起/倒下）；搭配水平90°可達成全部軸向朝向。
-// 管柱＝長(w)↔高(h) 互換（橫吊管⇄立管，幾何在 w-h 平面）；原釘頂者旋轉後頂端保持貼天花板（短邊支點釘頂）。
+// 管柱＝翻轉 L/U 方向（pipeUp：⌐ 頂橫段+垂直段朝下 ⇄ ⌟ 底橫段+垂直段朝上釘頂＝吊桿）；
+// 外框尺寸不變（長=橫段長、高=垂直段長、管徑=粗度），釘頂狀態自然保持（z+h 不變）。
 // 人物/已編輯櫃體不支援（櫃體內部座標依附 w/d/h，互換會毀損配置）。
 function rotateVertSel() {
   var sel = selectedObjs();
@@ -1499,10 +1500,8 @@ function rotateVertSel() {
   var ok = sel.filter(function (f) { return !isPerson(f) && !hasCab(f); });
   if (!ok.length) { showHint('垂直旋轉：人物／已編輯櫃體不支援'); return false; }
   ok.forEach(function (f) {
-    if (f.pipe) {
-      var top = f.z + f.h, tw = f.w; f.w = f.h; f.h = tw;
-      if (Math.abs(top - CEIL) < 0.01) f.z = Math.max(0, CEIL - f.h);   // 原釘頂 → 頂端維持貼天花板
-    } else { var t = f.d; f.d = f.h; f.h = t; }
+    if (f.pipe) { if (f.pipeUp) delete f.pipeUp; else f.pipeUp = true; }   // 翻轉 L/U 方向（吊桿⇄下牆）
+    else { var t = f.d; f.d = f.h; f.h = t; }
   });
   refreshAll();   // settleGravity 會自動落回支撐面
   var bad = ok.some(function (f) { return isInvalid(f) || overCeil(f); });
@@ -1521,7 +1520,7 @@ var clipF = null;
 function doCopy() {
   var f = getSel(); if (!f) return false;
   clipF = { name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, rot: f.rot, color: f.color, kind: f.kind, weight: f.weight,
-            skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT };
+            skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp };
   showHint('已複製：' + (f.name || '（未命名）') + '（Ctrl+V 貼上）');
   return true;
 }
@@ -1798,13 +1797,24 @@ function pipeParts(f) {
   if (kind === 'I') {   // 直管：沿最長邊一根（其餘置中）
     if (f.w >= f.h) out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });   // 水平直管（貼頂）
     else out.push({ bw: t, bd: ty, bh: f.h, cx: 0, bz: 0 });                    // 垂直直管
-  } else if (kind === 'L') {   // 頂部橫段＋左端垂直段（如天花板轉折下牆）
-    out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
-    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
-  } else {   // U：頂部橫段＋兩端垂直段
-    out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
-    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
-    out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: (f.w - t) / 2, bz: 0 });
+  } else if (kind === 'L') {
+    if (f.pipeUp) {   // 翻轉形 ⌟：橫段在下＋左端垂直段朝上（短邊頂端釘天花板＝吊桿）
+      out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: 0 });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: t });
+    } else {          // 頂部橫段＋左端垂直段朝下（如天花板轉折下牆）
+      out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
+    }
+  } else {
+    if (f.pipeUp) {   // 翻轉 U：橫段在下＋兩端垂直段朝上
+      out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: 0 });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: t });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: (f.w - t) / 2, bz: t });
+    } else {          // U：頂部橫段＋兩端垂直段
+      out.push({ bw: f.w, bd: ty, bh: t, cx: 0, bz: f.h - t });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: -(f.w - t) / 2, bz: 0 });
+      out.push({ bw: t, bd: ty, bh: Math.max(0, f.h - t), cx: (f.w - t) / 2, bz: 0 });
+    }
   }
   return out;
 }
@@ -2003,7 +2013,7 @@ $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
   addFurniture({ name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot, color: f.color,
                  kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab, note: f.note,
-                 pipe: f.pipe, pipeT: f.pipeT });
+                 pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp });
 });
 $('btnStack').addEventListener('click', function () {
   var f = getSel(); if (!f || isPerson(f)) return;
@@ -2982,7 +2992,7 @@ function updateSelBar() {
     var topZ = f.z + f.h;
     furniture.forEach(function (o) { if (o.id !== f.id && !isPerson(o) && obbOverlap(f, o)) topZ = Math.max(topZ, o.z + o.h); });
     var pc = fwd3d(f.x, f.y, topZ);
-    x = pc[0]; y = pc[1] - 46;
+    x = pc[0]; y = pc[1] - 84;   // 拉開距離：太近常擋到物件本體（使用者回報）
   } else {
     var r = stage.getBoundingClientRect(), s = scale2d();
     var ox = (r.width - vb.w * s) / 2, oy = (r.height - vb.h * s) / 2;
@@ -5107,9 +5117,15 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('fPipe').value = 'L';
   var pi84 = addBuiltin('pipe', 420, 800);            // 150×3.4×45 釘頂 z=CEIL−45
   setSel(pi84.id);
-  var exPi84 = rotateVertSel() === true &&
-               pi84.w === 45 && pi84.h === 150 && pi84.d === 3.4 &&          // 管柱＝長↔高互換（橫管變立管）
-               Math.abs(pi84.z - (CEIL - 150)) < 0.01 && ceilTouch(pi84);    // 短邊頂端仍釘天花板
+  var v84r = rotateVertSel() === true;
+  var pt84 = pipeParts(pi84);
+  var exPi84 = v84r && pi84.pipeUp === true &&
+               pi84.w === 150 && pi84.h === 45 && pi84.d === 3.4 &&          // 外框尺寸不變（長=橫段/高=垂直段）
+               pt84[0].bz === 0 &&                                           // 翻轉後橫段在底部（⌟ 吊桿）
+               Math.abs(pt84[1].bz + pt84[1].bh - pi84.h) < 0.01 &&          // 垂直段頂到外框頂
+               Math.abs(pi84.z + pi84.h - CEIL) < 0.01 && ceilTouch(pi84);   // 短邊頂端釘天花板
+  rotateVertSel();
+  exPi84 = exPi84 && !pi84.pipeUp && Math.abs(pipeParts(pi84)[0].bz - (pi84.h - pi84.pipeT)) < 0.01;   // 再按＝翻回頂橫段
   delFurniture(pi84.id); delFurniture(byId(f84.id).id); setSel(null); syncPanel();
   $('fD').value = 33; $('fH').value = 77;
   realClick($('btnRotV'));
@@ -5202,7 +5218,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var t88 = addFurniture({ name: '頂88', w: 30, d: 30, h: 50, x: 272, y: 845, z: 40, rot: 0, color: '#3d6ea5' });
   setSel(b88.id); refreshAll();
   var sb88 = $('selBar');
-  var yStack88 = fwd3d(b88.x, b88.y, 90)[1] - 46, yOwn88 = fwd3d(b88.x, b88.y, 40)[1] - 46;
+  var yStack88 = fwd3d(b88.x, b88.y, 90)[1] - 84, yOwn88 = fwd3d(b88.x, b88.y, 40)[1] - 84;
   var bar88 = sb88.style.display === 'flex' &&
               Math.abs(parseFloat(sb88.style.top) - Math.round(Math.max(4, yStack88))) < 1.5 && yStack88 < yOwn88;
   ck('selBar顯示於整疊最高點上方(不遮擋上層)', bar88,
