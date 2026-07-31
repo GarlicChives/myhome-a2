@@ -325,7 +325,7 @@
         <div><label style="visibility:hidden">.</label>
           <div style="display:flex;gap:6px">
             <button id="btnRot90" title="水平旋轉90°" style="flex:1">⟳ 水平90°</button>
-            <button id="btnRotV" title="垂直旋轉90°：寬↔高互換（物件立起/倒下）；人物/管柱/已編輯櫃體不支援" style="flex:1">⤵ 垂直90°</button>
+            <button id="btnRotV" title="垂直旋轉90°：寬↔高互換（物件立起/倒下）；管柱＝長↔高互換（橫吊管⇄立管）；人物/已編輯櫃體不支援" style="flex:1">⤵ 垂直90°</button>
           </div>
         </div>
       </div>
@@ -1490,18 +1490,24 @@ function rotateSel() {
   refreshAll();
   return true;
 }
-// 垂直旋轉90°：寬(d)↔高(h) 互換＝物件向前立起/倒下；搭配水平90°可達成全部軸向朝向。
-// 人物/管柱/已編輯櫃體不支援（櫃體內部座標依附 w/d/h，互換會毀損配置）。
+// 垂直旋轉90°：一般物件＝寬(d)↔高(h) 互換（向前立起/倒下）；搭配水平90°可達成全部軸向朝向。
+// 管柱＝長(w)↔高(h) 互換（橫吊管⇄立管，幾何在 w-h 平面）；原釘頂者旋轉後頂端保持貼天花板（短邊支點釘頂）。
+// 人物/已編輯櫃體不支援（櫃體內部座標依附 w/d/h，互換會毀損配置）。
 function rotateVertSel() {
   var sel = selectedObjs();
   if (!sel.length) return false;
-  var ok = sel.filter(function (f) { return !isPerson(f) && !f.pipe && !hasCab(f); });
-  if (!ok.length) { showHint('垂直旋轉：人物／管柱／已編輯櫃體不支援'); return false; }
-  ok.forEach(function (f) { var t = f.d; f.d = f.h; f.h = t; });
+  var ok = sel.filter(function (f) { return !isPerson(f) && !hasCab(f); });
+  if (!ok.length) { showHint('垂直旋轉：人物／已編輯櫃體不支援'); return false; }
+  ok.forEach(function (f) {
+    if (f.pipe) {
+      var top = f.z + f.h, tw = f.w; f.w = f.h; f.h = tw;
+      if (Math.abs(top - CEIL) < 0.01) f.z = Math.max(0, CEIL - f.h);   // 原釘頂 → 頂端維持貼天花板
+    } else { var t = f.d; f.d = f.h; f.h = t; }
+  });
   refreshAll();   // settleGravity 會自動落回支撐面
   var bad = ok.some(function (f) { return isInvalid(f) || overCeil(f); });
   if (bad) showHint('⚠ 垂直旋轉後與牆/家具重疊或超過天花板（紅框），再按一次轉回或拖曳調整');
-  else showHint('已垂直旋轉90°（寬↔高互換）' + (ok.length < sel.length ? '；人物/管柱/櫃體已略過' : ''));
+  else showHint('已垂直旋轉90°' + (ok.length < sel.length ? '；人物/櫃體已略過' : ''));
   return true;
 }
 function refreshAll() {
@@ -5099,14 +5105,16 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var exP84 = rotateVertSel() === false && pm84.d === 30 && pm84.h === 171;  // 人物不支援
   delFurniture(pm84.id);
   $('fPipe').value = 'L';
-  var pi84 = addBuiltin('pipe', 420, 800);
+  var pi84 = addBuiltin('pipe', 420, 800);            // 150×3.4×45 釘頂 z=CEIL−45
   setSel(pi84.id);
-  var exPi84 = rotateVertSel() === false && pi84.d === 3.4;                  // 管柱不支援
+  var exPi84 = rotateVertSel() === true &&
+               pi84.w === 45 && pi84.h === 150 && pi84.d === 3.4 &&          // 管柱＝長↔高互換（橫管變立管）
+               Math.abs(pi84.z - (CEIL - 150)) < 0.01 && ceilTouch(pi84);    // 短邊頂端仍釘天花板
   delFurniture(pi84.id); delFurniture(byId(f84.id).id); setSel(null); syncPanel();
   $('fD').value = 33; $('fH').value = 77;
   realClick($('btnRotV'));
   var form84 = +$('fD').value === 77 && +$('fH').value === 33;               // 未選取＝互換表單寬/高
-  ck('垂直旋轉90°(互換/懸浮列/V鍵/undo/排除人物管柱/表單)', v84 && back84 && key84 && un84 && exP84 && exPi84 && form84,
+  ck('垂直旋轉90°(互換/懸浮列/V鍵/undo/排除人物/管柱長高互換釘頂/表單)', v84 && back84 && key84 && un84 && exP84 && exPi84 && form84,
      '(倒下=' + v84 + ', 轉回=' + back84 + ', V鍵=' + key84 + ', undo=' + un84 + ', 排除=' + (exP84 && exPi84) + ', 表單=' + form84 + ')');
   // 85. 櫃體編輯頁下一步：↪ 按鈕／Ctrl+Y（Modal 內路由至 cabRedo）；新操作清空櫃體重做分支
   var cu85 = addFurniture({ name: '重做櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
