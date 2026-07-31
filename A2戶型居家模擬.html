@@ -312,7 +312,7 @@
             <option value="L">⌐ L 型（頂部橫段＋一端垂直段）</option>
             <option value="U">∩ U 型（頂部橫段＋兩端垂直段）</option>
           </select>
-          <input type="number" id="fPipeT" value="8" min="2" max="60" step="1" title="管徑（cm）" style="flex:0 0 76px">
+          <input type="number" id="fPipeT" value="3.4" min="1" max="30" step="0.1" title="管徑（cm；25A明管=3.4、32A=4.3、PVC電管=2）" style="flex:0 0 76px">
         </div>
       </div>
       <label>名稱（可留空）</label>
@@ -820,6 +820,72 @@ function cabCellCheck(f, cell, it) {
     return '剩餘體積不足（剩 ' + Math.round(free) + ' cm³，需 ' + Math.round(it.w * it.d * it.h) + ' cm³）';
   return '';
 }
+/* 新物品自動找位（不動既有物品）：候選＝格底/各物品頂面（z）×格左緣/各物品左右緣（x），
+   取最低最左的可行位；堆疊時強制「較大者在下」（支撐物體積須 ≥ 新物品）。成功回傳 true */
+function cabAutoPlace(f, cell, it) {
+  var inn = cabInner(f), its = cabItemsInCell(f, cell);
+  var ox = it.x, oz = it.z, oy = it.y;
+  var zs = [cell.z0], xs = [cell.x0 + it.w / 2, cell.x1 - it.w / 2];
+  its.forEach(function (o) {
+    zs.push(o.z + o.h);
+    xs.push(o.x + o.w / 2 + it.w / 2, o.x - o.w / 2 - it.w / 2);
+  });
+  zs = zs.filter(function (v, i) { return zs.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+  xs = xs.filter(function (v, i) { return xs.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
+  it.y = r1(inn.idp / 2);
+  for (var zi = 0; zi < zs.length; zi++) {
+    for (var xi = 0; xi < xs.length; xi++) {
+      var x = r1(xs[xi]), z = r1(zs[zi]);
+      if (x - it.w / 2 < cell.x0 - 0.01 || x + it.w / 2 > cell.x1 + 0.01) continue;
+      if (z + it.h > cell.z1 + 0.01) continue;
+      it.x = x; it.z = z;
+      if (Math.abs(cabItemFloor(f, it) - z) > 0.05) continue;   // 該高度須真有支撐（櫃底/隔板頂/物品頂）
+      if (cabItemBad(f, it)) continue;                          // 與內徑/隔板/物品衝突
+      if (z > cell.z0 + 0.05) {                                 // 堆疊：較大尺寸一律在下方
+        var underOk = true;
+        its.forEach(function (o) {
+          if (Math.abs(o.z + o.h - z) < 0.05 &&
+              Math.abs(o.x - it.x) < (o.w + it.w) / 2 - 0.01 &&
+              Math.abs(o.y - it.y) < (o.d + it.d) / 2 - 0.01 &&
+              o.w * o.d * o.h < it.w * it.d * it.h - 0.01) underOk = false;
+        });
+        if (!underOk) continue;
+      }
+      return true;
+    }
+  }
+  it.x = ox; it.z = oz; it.y = oy;
+  return false;
+}
+// 插入既有物品柱（x 區間重疊者為同一柱）：整柱含新物品依體積降冪重堆（大者在下）
+function cabInsertColumn(f, cell, it) {
+  var inn = cabInner(f), its = cabItemsInCell(f, cell);
+  if (!its.length) return false;
+  var cols = [];
+  its.forEach(function (o) {
+    var col = null;
+    cols.forEach(function (c) {
+      if (c.some(function (q) { return Math.abs(q.x - o.x) < (q.w + o.w) / 2 - 0.01; })) col = c;
+    });
+    if (col) col.push(o); else cols.push([o]);
+  });
+  for (var i = 0; i < cols.length; i++) {
+    var col = cols[i];
+    var save = col.map(function (o) { return { o: o, x: o.x, y: o.y, z: o.z }; });
+    var group = col.concat([it]).sort(function (a, b) { return b.w * b.d * b.h - a.w * a.d * a.h; });
+    var totH = 0, maxW = 0;
+    group.forEach(function (o) { totH += o.h; maxW = Math.max(maxW, o.w); });
+    if (totH > cell.z1 - cell.z0 + 0.01 || maxW > cell.x1 - cell.x0 + 0.01) continue;
+    var cx = 0;
+    col.forEach(function (o) { cx += o.x; });
+    cx = Math.max(cell.x0 + maxW / 2, Math.min(cell.x1 - maxW / 2, cx / col.length));
+    var z = cell.z0;
+    group.forEach(function (o) { o.x = r1(cx); o.y = r1(inn.idp / 2); o.z = r1(z); z += o.h; });
+    if (group.every(function (o) { return !cabItemBad(f, o); })) return true;
+    save.forEach(function (s) { s.o.x = s.x; s.o.y = s.y; s.o.z = s.z; });
+  }
+  return false;
+}
 // 同放置格自動排列：可並排→平均間隔擺放；否則堆疊（較大尺寸一律在下方＝體積降冪）。失敗回復原位並回傳 false
 function cabArrangeCell(f, cell) {
   var inn = cabInner(f), its = cabItemsInCell(f, cell);
@@ -843,6 +909,23 @@ function cabArrangeCell(f, cell) {
   if (ok) ok = its.every(function (o) { return !cabItemBad(f, o); });
   if (!ok) save.forEach(function (s) { s.o.x = s.x; s.o.y = s.y; s.o.z = s.z; });
   return ok;
+}
+/* 新增物品的放置決策（自動判定水平或堆疊）：
+   ① 格內原本單層且加入後仍排得下 → 全部平均間隔並排
+   ② 否則不動既有物品，找最低最左的可行位（水平優先，其次疊在較大物品上）
+   ③ 否則插入某一柱，該柱依體積降冪重堆（大者在下）
+   ④ 否則整格重排（單柱堆疊）；全部失敗才拒絕 */
+function cabPlaceNewItem(f, cell, it) {
+  var before = cabItemsInCell(f, cell).filter(function (o) { return o.id !== it.id; });
+  var singleLayer = before.every(function (o) { return Math.abs(o.z - cell.z0) < 0.05; });
+  var sumW = it.w;
+  before.forEach(function (o) { sumW += o.w; });
+  if (singleLayer && sumW <= cell.x1 - cell.x0 + 0.01 && it.h <= cell.z1 - cell.z0 + 0.01) {
+    if (cabArrangeCell(f, cell)) return true;
+  }
+  if (cabAutoPlace(f, cell, it)) return true;
+  if (cabInsertColumn(f, cell, it)) return true;
+  return cabArrangeCell(f, cell);
 }
 function cabPartsDir(f, dir) {
   return f.cab.parts.filter(function (p) { return p.dir === dir; }).sort(function (a, b) { return a.pos - b.pos; });
@@ -1661,12 +1744,13 @@ var BUILTINS = [
   { k: 'projector', name: '投影機',     w: 35,  d: 26,  h: 12,  color: '#37474f', emoji: '📽' },
   { k: 'laundry',   name: '洗衣籃',     w: 40,  d: 40,  h: 55,  color: '#d7b98e', emoji: '🧺' },
   { k: 'shoes',     name: '鞋子',       w: 24,  d: 10,  h: 9,   color: '#5d4037', emoji: '👟' },   // 預設腳長 24cm
-  { k: 'pipe',      name: '管柱',       w: 120, d: 8,   h: 60,  color: '#454a52', emoji: '🪈' }    // 直/L/U（f.pipe、管徑 f.pipeT）
+  { k: 'pipe',      name: '管柱',       w: 150, d: 3.4, h: 45,  color: '#3b3f45', emoji: '🪈' }    // 直/L/U（f.pipe、管徑 f.pipeT）
 ];
-var PIPE_T = 8;   // 管柱預設管徑（cm）
+// 管柱預設管徑＝住宅明管常見 25A（外徑 34mm）；32A＝4.27、電管 PVC 20mm＝2.0（面板可調 1~30）
+var PIPE_T = 3.4;
 // 管柱部件（local 座標，中心原點）：以 pipe 型式組出橫段/垂直段。t＝管徑
 function pipeParts(f) {
-  var t = Math.max(2, Math.min(Math.min(f.w, f.h), f.pipeT || PIPE_T));
+  var t = Math.max(1, Math.min(Math.min(f.w, f.h), f.pipeT || PIPE_T));
   var ty = Math.min(f.d, t), out = [];
   var kind = f.pipe || 'I';
   if (kind === 'I') {   // 直管：沿最長邊一根（其餘置中）
@@ -1847,7 +1931,7 @@ function liveApply() {
     var f = getSel();
     if (!f || !f.pipe) return;
     f.pipe = $('fPipe').value;
-    f.pipeT = clampN($('fPipeT').value, 2, 60, PIPE_T);
+    f.pipeT = clampN($('fPipeT').value, 1, 30, PIPE_T);
     refreshAll();
   });
 });
@@ -3310,7 +3394,7 @@ $('cabAddItem').addEventListener('click', function () {
   var err = cabCellCheck(cabF, cell, it);   // 放置格空間（尺寸＋體積）不足 → 不可新增
   if (err) { showHint('❌ 放置格空間不足：' + err); return; }
   cabF.cab.items.push(it);
-  if (!cabArrangeCell(cabF, cell)) {        // 自動排列（平均間隔/堆疊）也放不下 → 不可新增
+  if (!cabPlaceNewItem(cabF, cell, it)) {   // 自動判定（並排/找空位/堆疊）皆放不下 → 不可新增
     cabF.cab.items.pop();
     showHint('❌ 放置格無法容納：並排與堆疊皆放不下，請改選其他格或調整隔板');
     renderCab(); syncCabPanel();
@@ -3410,6 +3494,8 @@ function cabDragDelta(axis, dx, dy) {   // 螢幕位移 → 櫃體局部軸位�
   return L2 < 1e-9 ? 0 : (dx * vx + dy * vy) / L2;
 }
 cabViewEl.addEventListener('pointerdown', function (e) {
+  // 右上工具列在 3D 區內：不可 setPointerCapture（會把 click 攔截到 cabView，導致按鈕沒反應）
+  if (e.target.closest && e.target.closest('#cabTools')) return;
   try { cabViewEl.setPointerCapture(e.pointerId); } catch (err) {}
   clearCabHover();
   var ii = e.target.closest ? e.target.closest('[data-ii]') : null;
@@ -3553,6 +3639,7 @@ function nudgeSel(ddx, ddy) {
 }
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') {
+    if (cabModal.classList.contains('show')) { closeCab(); return; }   // 櫃體編輯頁：ESC＝完成儲存並關閉
     if (mStart) { mStart = null; redrawMeasures(); }
     else if (measuring) btnM.click();
   }
@@ -4630,19 +4717,23 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var ev72 = pc71.cab.items.length === 2 && t72a.z === 0 && t72b.z === 0 &&
              Math.abs(Math.min(t72a.x, t72b.x) - (gap72 + 15)) < 0.11 &&
              Math.abs(Math.max(t72a.x, t72b.x) - (gap72 * 2 + 45)) < 0.11;
-  $('cabAddKind').value = 'projector';                 // 35×26×12（體積最小）：併排 95>76 → 堆疊、最小在頂
+  $('cabAddKind').value = 'projector';                 // 35×26×12：併排 95>76 放不下 → 自動改疊在較大物品上
   $('cabAddKind').dispatchEvent(new Event('change'));
   $('cabAddItem').click();
   $('cabAddKind').value = '';
   var pj72 = pc71.cab.items[2];
-  var zs72 = pc71.cab.items.map(function (o) { return o.z; }).sort(function (a2, b2) { return a2 - b2; }).join(',');
+  var under72 = pc71.cab.items.filter(function (o) {   // 其下方的支撐物（體積須較大＝大者在下）
+    return o !== pj72 && Math.abs(o.z + o.h - pj72.z) < 0.05 &&
+           Math.abs(o.x - pj72.x) < (o.w + pj72.w) / 2 - 0.01;
+  })[0];
   var st72 = pc71.cab.items.length === 3 && pj72.skin === 'projector' &&
-             Math.abs(pj72.z - 80) < 0.01 && zs72 === '0,40,80' &&
-             pc71.cab.items.every(function (o) { return Math.abs(o.x - 38) < 0.01; });
+             Math.abs(pj72.z - 40) < 0.01 && !!under72 &&
+             under72.w * under72.d * under72.h > pj72.w * pj72.d * pj72.h &&
+             pc71.cab.items.every(function (o) { return !cabItemBad(pc71, o); });
   $('cabClose').click();
   delFurniture(pc71.id); setSel(null);
-  ck('同格自動排列(平均間隔/堆疊大者在下)', ev72 && st72,
-     '(並排x=' + r1(t72a.x) + '/' + r1(t72b.x) + ', 疊z=' + zs72 + ')');
+  ck('同格自動排列(平均間隔/自動改堆疊大者在下)', ev72 && st72,
+     '(並排x=' + r1(t72a.x) + '/' + r1(t72b.x) + ', 投影機疊於z=' + r1(pj72.z) + ')');
   // 73. 統一下拉選單新增（含人物）＋鞋子預設腳長 24cm
   var n73 = furniture.length;
   $('builtinSel').value = 'shoes'; $('btnAddBuiltin').click();
@@ -4762,6 +4853,72 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   ck('Modal右上工具列+外點不關+Delete刪隔板+取消還原',
      tools78 && stay78 && del78 && cancel78,
      '(工具列=' + tools78 + ', 外點不關=' + stay78 + ', Delete=' + del78 + ', 取消還原=' + cancel78 + ')');
+  // 79. 手動拖曳堆疊後仍可繼續新增（自動判定水平或堆疊）＝回歸測試：舊版整格重排失敗會誤擋
+  var mx79 = addFurniture({ name: '混排櫃', w: 80, d: 40, h: 120, x: 520, y: 900, rot: 0, color: '#795548' });
+  setSel(mx79.id); refreshAll(); openCab(mx79);
+  $('cabAddH').click();                                 // 一片隔板 → 底格 76×(z0..z1)×38
+  cabSelCell = { xi: 0, zi: 0 }; syncCabPanel();
+  $('cabAddKind').value = '';
+  $('ciAddW').value = 20; $('ciAddD').value = 20; $('ciAddH').value = 18;
+  $('cabAddItem').click(); $('cabAddItem').click();     // 兩件並排
+  var lay79 = mx79.cab.items.length === 2;
+  var i79a = mx79.cab.items[0], i79b = mx79.cab.items[1];
+  i79b.x = i79a.x; i79b.z = r1(i79a.z + i79a.h);        // 使用者手動拖曳：把第二件疊到第一件上（騰出空間）
+  cabSettleItems(mx79);
+  var stack79 = Math.abs(i79b.z - i79a.h) < 0.05 && !cabItemBad(mx79, i79b);
+  $('cabAddItem').click();                              // 應可繼續新增（水平空位）
+  var add79 = mx79.cab.items.length === 3 && !cabItemBad(mx79, mx79.cab.items[2]) &&
+              Math.abs(mx79.cab.items[2].z - i79a.z) < 0.05;     // 落在同層水平空位
+  var keepStack79 = Math.abs(i79b.z - i79a.h) < 0.05;             // 既有手動堆疊不被打散
+  $('ciAddW').value = 10; $('ciAddD').value = 10; $('ciAddH').value = 8;
+  var n79 = mx79.cab.items.length;
+  for (var g79 = 0; g79 < 6; g79++) $('cabAddItem').click();      // 水平排滿後應自動改堆疊，而非拒絕
+  var grow79 = mx79.cab.items.length === n79 + 6 &&
+               mx79.cab.items.every(function (o) { return !cabItemBad(mx79, o); }) &&
+               mx79.cab.items.some(function (o) { return o.z > i79a.z + 0.05; });
+  $('cabClose').click();
+  delFurniture(mx79.id); setSel(null);
+  ck('手動堆疊後仍可新增(自動判水平/堆疊)', lay79 && stack79 && add79 && keepStack79 && grow79,
+     '(並排=' + lay79 + ', 手動疊=' + stack79 + ', 續加=' + add79 + ', 不打散=' + keepStack79 + ', 連加6件=' + grow79 + ')');
+  // 80. Modal 右上工具列＝真實指標點擊有效（曾因 cabView setPointerCapture 攔截 click 而全部沒反應）
+  var tb80 = addFurniture({ name: '工具列櫃', w: 80, d: 40, h: 100, x: 520, y: 900, rot: 0, color: '#8d6e63' });
+  setSel(tb80.id); refreshAll(); openCab(tb80);
+  function realClick(el2) {   // 真實指標序列：pointerdown → pointerup → click（會冒泡經過 cabView）
+    var r5 = el2.getBoundingClientRect(), cx5 = r5.left + r5.width / 2, cy5 = r5.top + r5.height / 2;
+    pev(el2, 'pointerdown', cx5, cy5);
+    pev(el2, 'pointerup', cx5, cy5);
+    el2.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: cx5, clientY: cy5 }));
+  }
+  realClick($('cabAddH'));
+  var p80 = tb80.cab.parts.length === 1;
+  realClick($('cabUndoBtn'));                            // ↩ 上一步（真實點擊）
+  var undo80 = tb80.cab.parts.length === 0;
+  realClick($('cabAddH'));
+  realClick($('cabClose'));                              // ✔ 完成儲存（真實點擊）
+  var close80 = !cabModal.classList.contains('show') && hasCab(tb80) && tb80.cab.parts.length === 1;
+  openCab(tb80);
+  realClick($('cabAddH'));
+  realClick($('cabCancel'));                             // ✕ 取消（真實點擊）→ 還原成 1 片
+  var cancel80 = !cabModal.classList.contains('show') && tb80.cab.parts.length === 1;
+  openCab(tb80);                                          // ESC＝完成儲存並關閉；Modal 外點擊仍不關閉
+  cabModal.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var stay80 = cabModal.classList.contains('show');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  var esc80 = !cabModal.classList.contains('show') && hasCab(tb80);
+  delFurniture(tb80.id); setSel(null);
+  ck('Modal右上工具列真實點擊+ESC關閉+外點不關',
+     p80 && undo80 && close80 && cancel80 && stay80 && esc80,
+     '(上一步=' + undo80 + ', 完成=' + close80 + ', 取消=' + cancel80 + ', ESC=' + esc80 + ', 外點不關=' + stay80 + ')');
+  // 81. 管柱預設尺寸＝住宅明管級距（25A 外徑 3.4cm）：150×3.4×45、管徑 3.4
+  var pp81 = BUILTINS.find(function (b) { return b.k === 'pipe'; });
+  var p81a = pp81.w === 150 && pp81.d === 3.4 && pp81.h === 45 && PIPE_T === 3.4;
+  $('fPipe').value = 'L';
+  var po81 = addBuiltin('pipe', 272, 800);
+  var p81b = po81.pipeT === 3.4 && Math.abs(pipeParts(po81)[0].bh - 3.4) < 0.01 &&
+             Math.abs(pipeParts(po81)[0].bd - 3.4) < 0.01;   // 管段截面＝管徑
+  delFurniture(po81.id); setSel(null);
+  ck('管柱預設尺寸=明管25A(150×3.4×45)', p81a && p81b,
+     '(' + pp81.w + '×' + pp81.d + '×' + pp81.h + ', 管徑=' + PIPE_T + ')');
   $('builtinSel').value = 'table'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();

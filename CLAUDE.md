@@ -11,7 +11,7 @@
 每次改動後必須跑自動化驗證且全 PASS 才可交付，驗證涵蓋：
 2D 量測=CAD 標註、3D 座標往返（<0.01cm）、物件擺放後四向距離、旋轉後距離、
 兩點距離、物件與鄰近點（牆/家具）距離、外徑鏈總和。程式化斷言，不可目測了事；
-**新功能必須同步新增對應斷言**（selftest 目前 78 項）。自測不可只靠截圖：必須含真實
+**新功能必須同步新增對應斷言**（selftest 目前 81 項）。自測不可只靠截圖：必須含真實
 PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類（含 14 種內建物件全規則掃描）。
 **測試路徑要含對角/牆角等非軸向情境**（曾因只測軸向漏掉「對角逼近牆角整步退回卡住」的滑動 Bug）。
 
@@ -20,8 +20,9 @@ PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類�
 1. 先讀 `A2戶型-圖面解析.md`（圖面知識與功能現況）＋本檔陷阱清單。
 2. 只改 `tools/app_template.html`（**唯一 source of truth，嚴禁直接改產出 HTML**）。
 3. `python tools/build_app.py` 重建 `A2戶型居家模擬.html`（路徑已指向本目錄）。
-4. headless Chrome 跑 `?selftest=1` → **78 項全 PASS**；有新功能先補斷言再回到步驟 3。
-   注意：此機 Chrome 150 `--dump-dom` 無輸出，驗證用高視窗截圖（--window-size=1100,1500）讀 badge。
+4. headless Chrome 跑 `?selftest=1` → **81 項全 PASS**；有新功能先補斷言再回到步驟 3。
+   注意：此機 Chrome 150 `--dump-dom` 無輸出，驗證用高視窗截圖（--window-size=760,1700）讀 badge；
+   `&nb=1` 可隱藏 badge 供人工檢視畫面。
 5. 以人類視角逐張檢視截圖（base / st=3d / st=sel / st=panel / st=tut / st=ver / st=light / st=wood / st=cab），確認版面與互動狀態。
 6. 更新本檔（斷言數、功能清單）、`A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit`。**永久規則：`git push` 與部署必須等使用者明確下令才可執行**
@@ -79,13 +80,14 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
 - **備註**：物件 f.note（面板 #fNote textarea）與櫃體 f.cab.note（Modal #cabNote）皆為自由文字，
   隨存檔/匯出/複製；清單以 title 顯示、名稱後加 📝，3D 名稱標籤亦加 📝。hasCab 含 note。
 - **系統內建物件 16 種**（BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
-  小餐邊推車/垃圾桶/投影機/洗衣籃/**鞋子 24×10×9（腳長 24cm）**/**管柱 120×8×60**；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
+  小餐邊推車/垃圾桶/投影機/洗衣籃/**鞋子 24×10×9（腳長 24cm）**/**管柱 150×3.4×45（管徑＝住宅明管 25A 外徑 3.4cm；32A=4.3、PVC 電管=2）**；同名尺寸取自 A2居家配置_0849.json，冰箱 json 值 20×60×195 不合理
   改用 60×70×180；**鞋櫃 2026-07-31 依使用者指定改 64×32×200**）：內建於程式、不受存檔影響；
   **本質＝一般物件**（可自訂長寬高、受全部物件規則）；
   3D 以 SKIN3D 多部件外皮呈現（比例縮放）。**正面＝+y（預設視角近側）**：門面/櫃體開口/沙發座向皆同。
   **面板改為統一下拉選單 #builtinSel＋「➕ 加入」**（物件已多；含男/女主人 person:m|f，共 18 個 option，
   舊 #builtinGrid/btnMan/btnWoman 已移除）。
-- **管柱（k=pipe）**：f.pipe='I'|'L'|'U'（面板 #fPipe）＋管徑 f.pipeT（#fPipeT，預設 PIPE_T=8）；
+- **管柱（k=pipe）**：f.pipe='I'|'L'|'U'（面板 #fPipe）＋管徑 f.pipeT（#fPipeT，預設 PIPE_T=3.4＝明管 25A
+  外徑；範圍 1~30，截面以方管近似圓管——3.4cm 細管視覺差異可忽略）；
   pipeParts(f) 推導部件——**直＝沿最長邊一根（w≥h 為水平貼頂、否則垂直）、L＝頂部橫段＋一端垂直段、
   U＝頂部橫段＋兩端垂直段**（依使用者提供的天花板轉折方管照片）；3D 走 SKIN3D.pipe、2D 俯視畫實際管段投影。
   **碰撞/磁吸仍用整體 OBB**（與所有既有物件規則一致）；固定方式＝臨邊支點：只要一端貼天花板或牆即釘住，
@@ -116,12 +118,17 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   （change 事件；測試若直接設 value 需自行 dispatch change），使用者可再改。
   **Modal 右上角工具列 #cabTools（位於 #cabView 內）：↩ 上一步／✔ 完成儲存（closeCab）／✕ 取消（cancelCab
   ＝回到 cabHist[0] 開啟當下狀態並關閉）**；**點擊 Modal 外不再關閉**（已移除背景 click 關閉，避免誤觸遺失編輯）；
-  **Delete 鍵刪選取中的隔板**（其次殼板→物品）；Modal 開啟時主視圖快捷鍵（R/方向鍵/Ctrl+C/V）一律不作用。
+  **Delete 鍵刪選取中的隔板**（其次殼板→物品）；**ESC＝完成儲存並關閉**；
+  Modal 開啟時主視圖快捷鍵（R/方向鍵/Ctrl+C/V）一律不作用。
   櫃體備註 f.cab.note（#cabNote）。
   **放置物品新增規則（2026-07-31）**：須先點擊櫃內空白格選取「放置格」（cabCells＝隔板切出的網格、
   綠虛線高亮、cabSelCell 存 {xi,zi} 索引），且 cabCellCheck 過關（尺寸放得進格＋體積 ≤ 格剩餘體積＝
-  格空間−已放物品體積和），否則拒絕新增；**同格已有物品自動排列 cabArrangeCell**：可並排（Σ寬≤格寬）
-  ＝平均間隔擺放，否則堆疊且**較大尺寸（體積降冪）一律在下方**，兩者皆放不下＝退回原位並拒絕。
+  格空間−已放物品體積和），否則拒絕新增；**放置決策 cabPlaceNewItem（自動判定水平或堆疊，4 層遞降）**：
+  ①格內原為單層且加入後仍排得下→全部平均間隔並排（cabArrangeCell）；②否則**不動既有物品**、
+  以「格底/各物品頂面」×「格左緣/各物品左右緣」為候選找最低最左可行位（cabAutoPlace，須真有支撐
+  cabItemFloor 相符且 !cabItemBad；堆疊時支撐物體積須 ≥ 新物品＝大者在下）；③否則插入某一柱、
+  該柱含新物品依體積降冪重堆（cabInsertColumn）；④否則整格重排；全部失敗才拒絕。
+  **回歸重點：使用者手動拖曳堆疊後仍必須能繼續新增**（舊版只有「全並排/全單柱」兩種模式會誤擋）。
   隔板新增自動延伸至內徑並平均分配（span*(i+1)/(n+1)＝由中間算起不貼邊）、可拖曳/輸入調位
   （clamp 僅限內徑範圍；**與同向隔板重疊＝整片變紅警示、放開退回**，v↔h 十字相交合法）；
   **移動水平隔板時其頂面上物品（含堆疊遞迴 cabItemsOn）連動位移**，物品壓到其他隔板也紅+退回。
@@ -171,6 +178,11 @@ chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。
   且是牆到廚具（牆到牆為 185）；「57.5」端點鉤在廚具角。結構尺寸全部可信
 
 ## 陷阱（踩過的坑）
+
+- **Modal 內的按鈕若放在會 setPointerCapture 的 3D 區（#cabView）內，click 會被攔截 → 按鈕完全沒反應**：
+  cabView 的 pointerdown 必須先 `if (e.target.closest('#cabTools')) return;` 才不會捕獲指標。
+  **教訓：自測點按鈕不可只用 `el.click()`（會略過指標路徑而假 PASS），必須送 pointerdown→pointerup→click
+  的真實序列**（realClick），才能重現使用者實際操作。
 
 - **牆面線被門窗開口切成多段（38 個中段接點）**：pointInObb 必須把「點在物件邊上 ±0.05cm」
   視為接觸而非包含，否則物件貼牆會被誤判碰撞、卡在磁吸距離外進不去。
