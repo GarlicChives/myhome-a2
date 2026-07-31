@@ -1742,7 +1742,8 @@ $('btnAdd').addEventListener('click', function () {
   o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2;
   if (v.indexOf('person:') === 0) {          // 人物：kind/體重依選項，不可離地
     o.kind = 'person'; o.weight = v === 'person:m' ? 75 : 48; o.z = 0;
-  } else if (v === 'pipe') {                 // 管柱：型式/管徑取自面板欄位
+  } else if (v === 'pipe') {                 // 管柱：型式/管徑取自面板欄位；skin 必帶否則渲染成實心箱
+    o.skin = 'pipe';
     o.pipe = ($('fPipe') && $('fPipe').value) || 'L';
     o.pipeT = clampN($('fPipeT').value, 1, 30, PIPE_T);
   } else if (v !== 'custom') {
@@ -5225,6 +5226,20 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
      '(PgUp=' + up89 + ', PgDn=' + dn89 + ', 落回=' + free89 + ', Alt升=' + lift89 + '@' + r1(wl89.z) + ', 支點保留=' + hold89 + ')');
   [pp87, th87, fat87, b88, t88, wl89].forEach(function (o) { if (byId(o.id)) delFurniture(o.id); });
   setMode(false); setSel(null);
+  // 90. 統一入口新增管柱＝真管柱（UI 路徑曾漏 skin:'pipe' 而渲染成實心箱＝使用者回報「胖立方體」）
+  $('builtinSel').value = 'pipe'; $('builtinSel').dispatchEvent(new Event('change'));
+  $('btnAdd').click();
+  var pp90 = furniture[furniture.length - 1];
+  setMode(true);
+  var pb90 = boxHost.querySelector('[data-bid="' + pp90.id + '"]');
+  var faces90 = pb90 ? pb90.children.length : 0;
+  setMode(false);
+  var ok90 = pp90.skin === 'pipe' && pp90.pipe === 'L' && pp90.pipeT === PIPE_T &&
+             pipeParts(pp90).length === 2 && faces90 === 2 * 6 + 6 &&        // L 兩段×6 面＋隱形把手 6
+             Math.abs(pp90.z - (CEIL - pp90.h)) < 0.01;                      // 新增即釘天花板
+  delFurniture(pp90.id); setSel(null);
+  ck('統一入口新增管柱=真管柱(skin/L/釘頂/部件)', ok90,
+     '(skin=' + pp90.skin + ', 型式=' + pp90.pipe + ', faces=' + faces90 + ', z=' + r1(pp90.z) + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();
