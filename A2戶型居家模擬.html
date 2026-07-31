@@ -319,7 +319,7 @@
         <div id="boxHost"></div>
         <div id="vgHost"></div>
       </div></div>
-      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳（或左+右鍵同按、右鍵拖曳）平移、Shift+點選多選（R 群組旋轉、V 立倒）｜懸浮顯示四向＋垂直距離｜拖近物件磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Alt+拖曳＝調整離地、PgUp/PgDn 離地±0.5｜方向鍵微調 0.5cm｜Ctrl+Z/Y 復原重做｜Ctrl+C/V 複製貼上</div>
+      <div id="mode3dHint">拖曳旋轉視角｜滾輪縮放｜Shift+拖曳（或左+右鍵同按、右鍵拖曳）平移、Shift+點選多選（R 群組旋轉、V 立倒）｜懸浮顯示四向＋垂直距離｜拖近物件磁吸貼齊、推入即疊放（滾輪換層）、拖下方物件整疊連動｜Alt+拖曳＝調整離地、PgUp/PgDn 離地±0.5｜方向鍵移動 2cm（Shift＝0.5 微調）｜Ctrl+Z/Y 復原重做｜Ctrl+C/V 複製貼上</div>
     </div>
     <div id="panel" class="open">
       <h3 id="panelTitle">新增物件（家具／家電…）</h3>
@@ -486,7 +486,11 @@
             <div><label>深度位置（cm）</label><input type="number" id="ciY" min="0"></div>
           </div>
           <div id="cabDist"></div>
-          <div class="btnrow"><button id="cabDelItem">🗑 移除物品</button></div>
+          <div class="btnrow">
+            <button id="ciRot" title="旋轉90°（長↔寬互換）">⟳ 旋轉</button>
+            <button id="ciFlip" title="倒轉（寬↔高互換，立起/倒下）">⤵ 倒轉</button>
+            <button id="cabDelItem">🗑 移除物品</button>
+          </div>
         </div>
         <label>櫃體備註（可留空）</label>
         <textarea id="cabNote" rows="2" maxlength="200" placeholder="例：層板可調、五金型號、門片方向…"></textarea>
@@ -516,7 +520,7 @@
       <div>本頁由建商 CAD 原圖（日安TOKYO・A2戶型）精確轉換，<b>所有尺寸與圖面一致</b>（單位 cm），量測結果可直接用於施工溝通。</div>
       <div class="step"><b>① 檢視</b><span>滾輪縮放、拖曳平移；「3D 檢視」拖曳旋轉視角、Shift+拖曳平移；2D/3D 皆可<b>左+右鍵同時按住拖曳</b>＝固定角度平移整張平面圖。</span></div>
       <div class="step"><b>② 量測</b><span>游標懸浮即顯示四向距離（含與物件的距離）；3D 檢視（非正俯瞰）另顯示垂直方向上下兩點距離；「📏 量測」點兩點精準量距，自動吸附圖面節點。</span></div>
-      <div class="step"><b>③ 物件</b><span>「🛋 物件」輸入長寬高（名稱可留空、顏色用調色盤）新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；物件任一臨邊有支點（地板／物件／天花板／牆面＝可釘固定）即可停留；Shift+點選可多選（R 群組旋轉、<b>V 垂直旋轉＝立起/倒下</b>）、Ctrl+C/V 複製、<b>Ctrl+Z 復原／Ctrl+Y 重做</b>、Delete 刪除、<b>方向鍵微調 0.5cm</b>（可突破磁吸、仍不可覆蓋牆）；<b>Alt+拖曳＝調整離地高度、PgUp/PgDn 離地±0.5cm</b>（放開後依支點規則落定）；選取後「🗄 櫃體」可編輯隔板／刪殼板／放置物品（含內建物件）。</span></div>
+      <div class="step"><b>③ 物件</b><span>「🛋 物件」輸入長寬高（名稱可留空、顏色用調色盤）新增，拖曳擺放：靠近自動磁吸貼齊、往內推直接疊放（滾輪換上下層）、拖下方物件整疊跟著走；物件任一臨邊有支點（地板／物件／天花板／牆面＝可釘固定）即可停留；Shift+點選可多選（R 群組旋轉、<b>V 垂直旋轉＝立起/倒下</b>）、Ctrl+C/V 複製、<b>Ctrl+Z 復原／Ctrl+Y 重做</b>、Delete 刪除、<b>方向鍵移動 2cm、Shift+方向鍵微調 0.5cm</b>（可突破磁吸、仍不可覆蓋牆）；<b>Alt+拖曳＝調整離地高度、PgUp/PgDn 離地±0.5cm</b>（放開後依支點規則落定）；選取後「🗄 櫃體」可編輯隔板／刪殼板／放置物品（含內建物件）。</span></div>
       <div class="step"><b>④ 儲存/分享</b><span>配置隨時自動儲存在你的瀏覽器，下次開啟（含重開機）自動接續；「💾 版本」可另存多個方案並隨時還原；「匯出/匯入」JSON 檔可備份或跨裝置分享。</span></div>
       <div class="note">匯入 CAD：本頁已內建 A2 戶型圖面；更換其他戶型／建案需以隨附 tools 轉檔管線重新產生頁面（DWG→DXF→HTML），一般使用者無需操作，未來將支援直接上傳 CAD 檔。</div>
       <div class="foot">
@@ -1555,9 +1559,9 @@ function doCopy() {
 function doPaste() {
   if (!clipF) return null;
   var base = getSel();
-  var o = { name: clipF.name, w: clipF.w, d: clipF.d, h: clipF.h, z: clipF.z, rot: clipF.rot, color: clipF.color,
-            kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab,
-            note: clipF.note, pipe: clipF.pipe, pipeT: clipF.pipeT };
+  var o = { name: uniqueName(clipF.name), w: clipF.w, d: clipF.d, h: clipF.h, z: clipF.z, rot: clipF.rot,
+            color: clipF.color, kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab,
+            pipe: clipF.pipe, pipeT: clipF.pipeT, pipeUp: clipF.pipeUp };   // 貼上：不重名、不帶備註
   if (base) { o.x = base.x + 30; o.y = base.y + 30; }
   else { o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2; }
   var nf = addFurniture(o);
@@ -1788,19 +1792,7 @@ function renderNotes() {
       if (ta.value) f.note = ta.value; else delete f.note;
       renderList(); saveState();   // 右側清單 📝 即時同步；本面板因 activeElement 保護不重繪
     });
-    d.appendChild(ta);
-    if (f.cab) {   // 櫃體備註（f.cab.note）也集中在此編輯
-      var cl = document.createElement('div');
-      cl.className = 'clab'; cl.textContent = '櫃體備註：';
-      d.appendChild(cl);
-      var ca = document.createElement('textarea');
-      ca.rows = 1; ca.placeholder = '（無櫃體備註）'; ca.value = f.cab.note || '';
-      ca.addEventListener('input', function () {
-        if (ca.value) f.cab.note = ca.value; else delete f.cab.note;
-        saveState();
-      });
-      d.appendChild(ca);
-    }
+    d.appendChild(ta);   // 僅物件備註（櫃體備註於櫃體編輯 Modal 內維護）
     box.appendChild(d);
   });
 }
@@ -1811,6 +1803,16 @@ function readForm() {
            rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
 }
 function clampN(v, lo, hi, dflt) { v = +v; if (isNaN(v)) return dflt; return Math.max(lo, Math.min(hi, v)); }
+// 複製時避免重複命名：茶几→茶几2→茶几3…（空名稱不處理）
+function uniqueName(name) {
+  if (!name) return name;
+  var used = {};
+  furniture.forEach(function (o) { used[o.name] = 1; });
+  if (!used[name]) return name;
+  var m = name.match(/^(.*?)(\d+)$/), base = m ? m[1] : name, i = m ? +m[2] + 1 : 2;
+  while (used[base + i]) i++;
+  return base + i;
+}
 $('btnAdd').addEventListener('click', function () {
   var v = $('builtinSel').value, o = readForm();
   o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2;
@@ -1854,6 +1856,10 @@ var BUILTINS = [
   { k: 'projector', name: '投影機',     w: 35,  d: 26,  h: 12,  color: '#37474f', emoji: '📽' },
   { k: 'laundry',   name: '洗衣籃',     w: 40,  d: 40,  h: 55,  color: '#d7b98e', emoji: '🧺' },
   { k: 'shoes',     name: '鞋子',       w: 24,  d: 10,  h: 9,   color: '#5d4037', emoji: '👟' },   // 預設腳長 24cm
+  { k: 'cooker',    name: '大同電鍋',   w: 32,  d: 32,  h: 30,  color: '#2e7d32', emoji: '🍚' },   // 10人份經典綠
+  { k: 'dishdryer', name: '烘碗機',     w: 45,  d: 35,  h: 25,  color: '#eceff1', emoji: '🍽' },   // 桌上型
+  { k: 'oven',      name: '烤箱',       w: 54,  d: 42,  h: 33,  color: '#37474f', emoji: '🔥' },   // 桌上型電烤箱 32L
+  { k: 'microwave', name: '微波爐',     w: 51,  d: 40,  h: 30,  color: '#b0bec5', emoji: '📻' },   // 家用標準
   { k: 'pipe',      name: '管柱',       w: 150, d: 3.4, h: 45,  color: '#9aa3ad', emoji: '🪈' }    // 直/L/U（f.pipe、管徑 f.pipeT）；金屬灰＝黑底 3D 可見
 ];
 // 管柱預設管徑＝住宅明管常見 25A（外徑 34mm）；32A＝4.27、電管 PVC 20mm＝2.0（面板可調 1~30）
@@ -1888,7 +1894,23 @@ function pipeParts(f) {
   return out;
 }
 // 3D 外觀（外皮）：以比例組合方塊，長寬高改變時整體等比跟隨；正面＝+y 側（預設視角的近側，看得到門面）
+// 廚房家電共用：本體＋前門面板＋橫把手（門色 doorCol、把手高度比例 hRatio）
+function applianceSkin(f, box, cls, doorCol, hRatio) {
+  box(f.w, f.d, f.h, f.z, cls);                                                        // 本體
+  box(f.w * 0.88, 1.6, f.h * 0.62, f.z + f.h * 0.14, '', 0, f.d / 2 - 0.8, doorCol);   // 前門面板
+  box(f.w * 0.66, 2, 2.6, f.z + f.h * hRatio, '', 0, f.d / 2 + 0.6, '#9e9e9e');        // 橫把手（微凸）
+}
 var SKIN3D = {
+  // 廚房家電共用外皮：本體＋前門面板（+y 正面）＋把手。doorCol/handleTop 依機種微調
+  dishdryer: function (f, box, cls) { applianceSkin(f, box, cls, '#90a4ae', 0.5); },
+  oven:      function (f, box, cls) { applianceSkin(f, box, cls, '#212121', 0.82); },
+  microwave: function (f, box, cls) { applianceSkin(f, box, cls, '#455a64', 0.5); },
+  cooker: function (f, box, cls) {   // 大同電鍋：鍋身＋淺色上蓋＋蓋鈕（比例縮放）
+    var bodyH = f.h * 0.72, lidH = f.h * 0.2;
+    box(f.w, f.d, bodyH, f.z, '', 0, 0, f.color);
+    box(f.w * 0.94, f.d * 0.94, lidH, f.z + bodyH, '', 0, 0, shade(f.color, 1.25));
+    box(f.w * 0.22, f.d * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9c9c9');
+  },
   table: function (f, box, cls) {
     var t = Math.max(3, Math.min(5, f.h * 0.08)), lw = Math.max(4, Math.min(8, f.w * 0.05));
     box(f.w, f.d, t, f.z + f.h - t, cls);
@@ -2080,8 +2102,8 @@ function liveApply() {
 $('btnUpdate').addEventListener('click', liveApply);
 $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
-  addFurniture({ name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot, color: f.color,
-                 kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab, note: f.note,
+  addFurniture({ name: uniqueName(f.name), w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot,
+                 color: f.color, kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab,   // 複製：不重名、不帶備註
                  pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp });
 });
 $('btnStack').addEventListener('click', function () {
@@ -3679,6 +3701,25 @@ $('cabDelItem').addEventListener('click', function () {
   cabF.cab.items.splice(cabSelI, 1); cabSelI = -1;
   cabCommit();
 });
+// 櫃內物品旋轉90°（長↔寬）／倒轉（寬↔高）：互換後落回支撐面，放不下則還原
+function cabItemSwapDims(kind2) {
+  if (!cabF || cabSelI < 0) return;
+  var it = cabF.cab.items[cabSelI];
+  var o = { w: it.w, d: it.d, h: it.h, z: it.z };
+  if (kind2 === 'rot') { it.w = o.d; it.d = o.w; }
+  else { it.d = o.h; it.h = o.d; }
+  it.z = r1(cabItemFloor(cabF, it));
+  if (cabItemBad(cabF, it)) {
+    it.w = o.w; it.d = o.d; it.h = o.h; it.z = o.z;
+    showHint('❌ ' + (kind2 === 'rot' ? '旋轉' : '倒轉') + '後超出內徑或與隔板/物品重疊，已還原');
+    renderCab(); syncCabPanel();
+    return;
+  }
+  cabCommit();
+  showHint(kind2 === 'rot' ? '已旋轉90°（長↔寬互換）' : '已倒轉（寬↔高互換）');
+}
+$('ciRot').addEventListener('click', function () { cabItemSwapDims('rot'); });
+$('ciFlip').addEventListener('click', function () { cabItemSwapDims('flip'); });
 $('cabClose').addEventListener('click', closeCab);
 $('cabCancel').addEventListener('click', cancelCab);
 // 櫃體備註（自由文字，隨 cab 一起存檔/匯出/複製）
@@ -3765,6 +3806,27 @@ cabViewEl.addEventListener('pointermove', function (e) {
 function endCabPtr(e) {
   if (cabPtr && cabPtr.mode === 'item' && cabSelI >= 0 && cabF) {   // 放開：落在支撐面（櫃底/隔板頂/物品頂）
     var it = cabF.cab.items[cabSelI];
+    // 拖到覆蓋其他物品 → 自動調換位置（swap：對方移到本物品拖曳前的位置）
+    var other = null;
+    cabF.cab.items.forEach(function (o2, i2) {
+      if (i2 === cabSelI || other) return;
+      if (Math.abs(o2.x - it.x) < (o2.w + it.w) / 2 - 0.01 &&
+          it.z < o2.z + o2.h - 0.01 && o2.z < it.z + it.h - 0.01) other = o2;
+    });
+    if (other) {
+      var sw = { ox: other.x, oz: other.z };
+      other.x = cabPtr.ix0; other.z = cabPtr.iz0;
+      it.x = sw.ox; it.z = sw.oz;
+      it.z = r1(cabItemFloor(cabF, it)); other.z = r1(cabItemFloor(cabF, other));
+      if (cabItemBad(cabF, it) || cabItemBad(cabF, other)) {   // 任一放不下 → 全部還原
+        it.x = cabPtr.ix0; it.z = cabPtr.iz0;
+        other.x = sw.ox; other.z = sw.oz;
+        showHint('❌ 調換後放不下（超出內徑或重疊），已退回');
+      } else showHint('已與「' + (other.skin || '物品') + '」自動調換位置');
+      cabCommit();
+      cabPtr = null;
+      return;
+    }
     it.z = r1(cabItemFloor(cabF, it));
     if (cabItemBad(cabF, it)) {   // 放不下（超出內徑/與隔板或物品重疊）→ 退回
       it.x = cabPtr.ix0; it.z = cabPtr.iz0;
@@ -3874,7 +3936,8 @@ document.addEventListener('keydown', function (e) {
   var am = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }[e.key];
   if (am && selIds.length && !typing) {
     e.preventDefault();
-    nudgeSel(am[0], am[1]);
+    var kk = e.shiftKey ? 1 : 4;   // 預設 2cm/步（加快移動）；Shift+方向鍵＝0.5cm 精細微調
+    nudgeSel(am[0] * kk, am[1] * kk);
   }
   if ((e.ctrlKey || e.metaKey) && !typing) {
     if (e.key === 'c' || e.key === 'C') { if (doCopy()) e.preventDefault(); }
@@ -4418,8 +4481,10 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   // 44. 系統內建物件庫：16 種（含鞋子/管柱/洗衣籃），統一下拉選單（含男女主人）
   var biSel = document.getElementById('builtinSel');
   var biNames = BUILTINS.map(function (b2) { return b2.name; });
-  ck('內建物件庫16種+統一下拉', BUILTINS.length === 16 && biSel.options.length === 19 &&
-     biNames.indexOf('洗衣籃') !== -1 && biNames.indexOf('鞋子') !== -1 && biNames.indexOf('管柱') !== -1,
+  ck('內建物件庫20種+統一下拉', BUILTINS.length === 20 && biSel.options.length === 23 &&
+     biNames.indexOf('洗衣籃') !== -1 && biNames.indexOf('鞋子') !== -1 && biNames.indexOf('管柱') !== -1 &&
+     biNames.indexOf('大同電鍋') !== -1 && biNames.indexOf('烘碗機') !== -1 &&
+     biNames.indexOf('烤箱') !== -1 && biNames.indexOf('微波爐') !== -1,
      '(' + biNames.join('/') + '｜options=' + biSel.options.length + ')');
   // 45. 內建物件＝一般物件（可自訂長寬高、受規則）＋3D 多部件外皮
   var bi = addBuiltin('fridge', 200, 760);
@@ -4434,8 +4499,8 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   ck('內建物件=一般物件+3D外皮', biDims && biSkinOk && biRule, '(faces=' + (biBox ? biBox.children.length : 0) + ')');
   // 46. 內建物件庫不受存檔影響（清除 localStorage 後仍完整）
   try { localStorage.clear(); } catch (e) {}
-  ck('內建物件庫不受存檔影響', document.getElementById('builtinSel').options.length === 19 &&
-     BUILTINS.length === 16);
+  ck('內建物件庫不受存檔影響', document.getElementById('builtinSel').options.length === 23 &&
+     BUILTINS.length === 20);
   // 47. 懸浮功能列（人物無櫃體鈕）＋櫃體 Modal 開啟（空心殼 5 板、預設隔板厚 2）
   setSel(pm.id); syncPanel();
   var personNoCab = document.getElementById('btnCabOpen').style.display === 'none';
@@ -4759,7 +4824,10 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   // 65. 鍵盤方向鍵微調 0.5cm/步（不經磁吸），朝牆連按＝被擋停、全程不覆蓋牆/物件
   var kb65 = addFurniture({ name: '微調測試', w: 40, d: 40, h: 30, x: 200, y: 640, rot: 0, color: '#998877' });
   setSel(kb65.id); refreshAll();
-  function kev(k2) { document.dispatchEvent(new KeyboardEvent('keydown', { key: k2, bubbles: true })); }
+  function kev(k2) { document.dispatchEvent(new KeyboardEvent('keydown', { key: k2, bubbles: true, shiftKey: true })); }   // Shift＝0.5cm 微調
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+  var fast65 = kb65.x === 198;   // 預設（無 Shift）＝2cm/步（移動加快）
+  kb65.x = 200; refreshAll();
   kev('ArrowLeft');  var n65a = kb65.x === 199.5 && kb65.y === 640;
   kev('ArrowUp');    var n65b = kb65.y === 639.5;
   kev('ArrowRight'); kev('ArrowDown');
@@ -4772,8 +4840,8 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   }
   var wall65 = kb65.x === 150 && guard65 < 300 && !inv65;
   delFurniture(kb65.id); setSel(null);
-  ck('鍵盤微調0.5cm+不可覆蓋牆阻擋', n65a && n65b && n65c && wall65,
-     '(往返=' + n65c + ', 停於x=' + kb65.x + ')');
+  ck('鍵盤預設2cm/Shift微調0.5+不可覆蓋牆阻擋', fast65 && n65a && n65b && n65c && wall65,
+     '(2cm=' + fast65 + ', 往返=' + n65c + ', 停於x=' + kb65.x + ')');
   // 66. 殼板刪除（底/頂/左/右）＋內建物件放置櫃內＋櫃內物品六向距離
   var cb66 = addFurniture({ name: '層架', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
   setSel(cb66.id); refreshAll(); openCab(cb66);
@@ -5351,9 +5419,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   taA.value = '改過的備註'; taA.dispatchEvent(new Event('input'));
   var edit91 = byId(n91.id).note === '改過的備註';           // 直接編輯即時寫回
   var tasB = rows91[rows91.length - 1].querySelectorAll('textarea');
-  var cabTa91 = tasB.length === 2 && tasB[1].value === '櫃備';
-  tasB[1].value = '櫃備2'; tasB[1].dispatchEvent(new Event('input'));
-  var cabEdit91 = n91b.cab.note === '櫃備2';                 // 櫃體備註也可在此編輯
+  var oneTa91 = tasB.length === 1;                           // 僅物件備註（櫃體備註已移除，含 cab 物件亦同）
   rows91[rows91.length - 1].querySelector('.nname').dispatchEvent(new MouseEvent('click', { bubbles: true }));
   var sel91 = selIds.length === 1 && selIds[0] === n91b.id;  // 點名稱＝選取
   var rows91c = $('notesList').querySelectorAll('.nrow');    // 選取觸發重繪 → 重新查詢
@@ -5363,8 +5429,72 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   realClick($('btnNotes'));
   var close91 = !notesPanel.classList.contains('open');
   delFurniture(n91.id); delFurniture(n91b.id); setSel(null);
-  ck('總筆記面板(彙整/編輯/櫃體備註/點選/清空)', open91 && vA91 && edit91 && cabTa91 && cabEdit91 && sel91 && del91 && close91,
-     '(開=' + open91 + ', 帶入=' + vA91 + ', 編輯=' + edit91 + ', 櫃備=' + (cabTa91 && cabEdit91) + ', 點選=' + sel91 + ', 清空=' + del91 + ')');
+  ck('總筆記面板(彙整/編輯/僅物件備註/點選/清空)', open91 && vA91 && edit91 && oneTa91 && sel91 && del91 && close91,
+     '(開=' + open91 + ', 帶入=' + vA91 + ', 編輯=' + edit91 + ', 單欄=' + oneTa91 + ', 點選=' + sel91 + ', 清空=' + del91 + ')');
+  // 92. 複製/貼上：命名不重複（複測→複測2→複測3→複測4）且備註不複製
+  var c92 = addFurniture({ name: '複測', w: 20, d: 20, h: 20, x: 272, y: 800, rot: 0, color: '#607d8b', note: 'X' });
+  setSel(c92.id); $('btnDup').click();
+  var d92 = furniture[furniture.length - 1];
+  var dup92 = d92.name === '複測2' && !d92.note;
+  setSel(d92.id); $('btnDup').click();
+  var d92b = furniture[furniture.length - 1];
+  var dup92b = d92b.name === '複測3' && !d92b.note;
+  setSel(d92b.id); doCopy();
+  var p92 = doPaste();
+  var pas92 = p92.name === '複測4' && !p92.note;
+  [c92, d92, d92b, p92].forEach(function (o) { delFurniture(o.id); });
+  setSel(null); clipF = null;
+  ck('複製不重名+不帶備註(dup×2/貼上)', dup92 && dup92b && pas92,
+     '(' + d92.name + '/' + d92b.name + '/' + p92.name + ')');
+  // 93. 櫃內物品：旋轉90°(長↔寬)/倒轉(寬↔高)＋拖曳覆蓋其他物品自動調換位置
+  var cb93 = addFurniture({ name: '調換櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
+  setSel(cb93.id); refreshAll(); openCab(cb93);
+  cabSelCell = { xi: 0, zi: 0 };
+  $('cabAddKind').value = '';
+  $('ciAddW').value = 30; $('ciAddD').value = 20; $('ciAddH').value = 10;
+  $('cabAddItem').click();
+  $('ciAddW').value = 16; $('ciAddD').value = 16; $('ciAddH').value = 24;
+  $('cabAddItem').click();
+  var iA93 = cb93.cab.items[0], iB93 = cb93.cab.items[1];
+  cabSelI = 0; renderCab(); syncCabPanel();
+  realClick($('ciRot'));
+  var rot93 = iA93.w === 20 && iA93.d === 30 && iA93.h === 10;      // 長↔寬互換
+  realClick($('ciFlip'));
+  var flip93 = iA93.w === 20 && iA93.d === 10 && iA93.h === 30;     // 寬↔高互換（立起）
+  var xA93 = iA93.x, xB93 = iB93.x;
+  cabSelI = 1;
+  cabPtr = { mode: 'item', lx: 0, ly: 0, ix0: iB93.x, iz0: iB93.z };
+  iB93.x = iA93.x; iB93.z = iA93.z;                                 // 模擬拖曳到覆蓋 iA
+  endCabPtr(null);
+  var swap93 = Math.abs(iB93.x - xA93) < 0.11 && Math.abs(iA93.x - xB93) < 0.11 &&
+               !cabItemBad(cb93, iA93) && !cabItemBad(cb93, iB93);  // 自動調換位置且皆合法
+  $('cabClose').click();
+  delFurniture(cb93.id); setSel(null);
+  ck('櫃內物品旋轉/倒轉+覆蓋自動調換', rot93 && flip93 && swap93,
+     '(旋轉=' + rot93 + ', 倒轉=' + flip93 + ', 調換=' + swap93 + ')');
+  // 94. 內建物件：大同電鍋（32×32×30、鍋身+上蓋+蓋鈕 3 部件外皮）
+  var ck94 = addBuiltin('cooker', 272, 800);
+  setMode(true);
+  var cb94 = boxHost.querySelector('[data-bid="' + ck94.id + '"]');
+  var f94 = cb94 ? cb94.children.length : 0;
+  setMode(false);
+  var ok94 = ck94.skin === 'cooker' && ck94.w === 32 && ck94.d === 32 && ck94.h === 30 && f94 === 18;
+  delFurniture(ck94.id); setSel(null);
+  ck('內建大同電鍋(32×32×30+3部件外皮)', ok94, '(faces=' + f94 + ')');
+  // 95. 內建廚房家電：烘碗機 45×35×25／烤箱 54×42×33／微波爐 51×40×30（本體+門+把手外皮）
+  var ok95 = true, det95 = [];
+  [['dishdryer', 45, 35, 25], ['oven', 54, 42, 33], ['microwave', 51, 40, 30]].forEach(function (sp) {
+    var a95 = addBuiltin(sp[0], 272, 800);
+    setMode(true);
+    var bx95 = boxHost.querySelector('[data-bid="' + a95.id + '"]');
+    var fc95 = bx95 ? bx95.children.length : 0;
+    setMode(false);
+    ok95 = ok95 && a95.skin === sp[0] && a95.w === sp[1] && a95.d === sp[2] && a95.h === sp[3] && fc95 === 18;
+    det95.push(sp[0] + '=' + fc95);
+    delFurniture(a95.id);
+  });
+  setSel(null);
+  ck('內建烘碗機/烤箱/微波爐(尺寸+3部件外皮)', ok95, '(' + det95.join(', ') + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();

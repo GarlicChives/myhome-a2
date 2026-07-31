@@ -50,8 +50,9 @@
 ## 總筆記面板（左側）
 
 - header「📝 筆記」btnNotes 切換 #notesPanel（#main 首個 flex 子元素、寬 264、border-right；toggle 後 onResize）。
-- renderNotes()：每物件一列（色點+名稱+尺寸+textarea；f.cab 另有櫃體備註 textarea）；點名稱＝setSel+refreshAll；
-  textarea input 即時寫回 f.note / f.cab.note（清空＝delete）＋renderList+saveState。
+- renderNotes()：每物件一列（色點+名稱+尺寸+textarea）；**僅物件備註 f.note**（櫃體備註 2026-08-01
+  依使用者要求移除，於櫃體 Modal 內維護）；點名稱＝setSel+refreshAll；
+  textarea input 即時寫回 f.note（清空＝delete）＋renderList+saveState。
 - **輸入中不重繪**：renderNotes 若 activeElement 在面板內直接 return（游標保護）；refreshAll 內掛 renderNotes。
 
 ## 備註
@@ -59,7 +60,11 @@
 - 物件 f.note（面板 #fNote textarea）與櫃體 f.cab.note（Modal #cabNote）皆為自由文字，
   隨存檔/匯出/複製；清單以 title 顯示、名稱後加 📝，3D 名稱標籤亦加 📝。hasCab 含 note。
 
-## 系統內建物件（16 種＋人物）
+## 系統內建物件（20 種＋人物）
+
+- 2026-08-01 新增廚房家電 4 種：**大同電鍋 32×32×30**（cooker，經典綠，鍋身+上蓋+蓋鈕外皮）、
+  **烘碗機 45×35×25**（dishdryer）、**烤箱 54×42×33**（oven）、**微波爐 51×40×30**（microwave）——
+  後三者共用 applianceSkin（本體+前門面板+把手）。#builtinSel 共 23 options。
 
 - BUILTINS：桌子/冰箱/隔板60×30×2/床/沙發/鞋櫃/衣櫃/行李箱/登機箱/小椅子/
   小餐邊推車/垃圾桶/投影機/洗衣籃/**鞋子 24×10×9（腳長 24cm）**/**管柱 150×3.4×45**；
@@ -128,6 +133,10 @@
 
 ## 櫃體編輯 Modal
 
+- **櫃內物品旋轉/倒轉（2026-08-01）**：選取物品後側欄「⟳ 旋轉」（長↔寬）/「⤵ 倒轉」（寬↔高），
+  cabItemSwapDims：互換→cabItemFloor 落回支撐面→cabItemBad 則整組還原；
+  **拖曳物品覆蓋另一物品＝自動調換位置**（endCabPtr item 分支：x/z 區間重疊偵測→雙方互換位置各自落定，
+  任一放不下全還原）。
 - （90vw×90vh）物件變空心殼（殼厚 CAB_TS=2cm、正面 +y 開放＝開口、無前板）＋隔板＋櫃內物品。
   f.cab={t(隔板厚度預設 2、範圍 0.4~3), parts:[{dir:'h'|'v',pos,t,color?,mat?}], items:[{w,d,h,x,y,z,skin?,...}],
   noBottom/noTop/noLeft/noRight/noBack, sc:{bottom/top/left/right/back:{color,mat}}}。
@@ -170,6 +179,8 @@
 ## 多選／複製貼上
 
 - Shift+點選多選＋R 群組旋轉（繞群組外框中心）；Ctrl+C/V 複製貼上；滾輪換疊放層。
+- **複製/貼上（btnDup 與 doPaste）：命名不可重複**——uniqueName()：茶几→茶几2→茶几3…（尾數字遞增；
+  空名稱不處理）；**備註 f.note 不複製**（2026-08-01 使用者要求）。
 
 ## 平移（左+右鍵）
 
@@ -179,8 +190,9 @@
 
 ## 鍵盤微調
 
-- **方向鍵微調選取物件 0.5cm/步**（nudgeSel）：直接位移不經磁吸（可突破磁鐵誤判），
-  但不可覆蓋牆面/其他物件（違者整步阻擋+提示）；上方堆疊 pileAbove 連動；INPUT 聚焦或櫃體 Modal 開啟時不作用。
+- **方向鍵預設 2cm/步（加快）、Shift+方向鍵＝0.5cm 精細微調**（2026-08-01 改；nudgeSel 乘數 kk=shift?1:4）：
+  直接位移不經磁吸（可突破磁鐵誤判），但不可覆蓋牆面/其他物件（違者整步阻擋+提示）；
+  上方堆疊 pileAbove 連動；INPUT 聚焦或櫃體 Modal 開啟時不作用。**測試 kev 需帶 shiftKey:true 走 0.5 路徑**。
 
 ## 尺寸標註／3D 標籤
 
