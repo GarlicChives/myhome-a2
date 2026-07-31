@@ -60,6 +60,23 @@
   #panel { width: 252px; background: #22222a; color: #ddd; padding: 10px; overflow-y: auto; display: none;
            border-left: 1px solid #3a3a44; z-index: 20; }
   #panel.open { display: block; }
+  /* 總筆記面板（左側）：所有物件備註彙整＋直接編輯（與設計師溝通用） */
+  #notesPanel { width: 264px; background: #22222a; color: #ddd; padding: 10px; overflow-y: auto; display: none;
+                border-right: 1px solid #3a3a44; z-index: 20; }
+  #notesPanel.open { display: block; }
+  #notesPanel h3 { font-size: 13px; margin: 4px 0 6px; color: #9ab; }
+  #notesPanel .nhint { font-size: 11.5px; color: #778; margin-bottom: 8px; line-height: 1.5; }
+  .nrow { border-top: 1px solid #33333d; padding: 7px 0 6px; }
+  .nrow .nname { display: flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer;
+                 padding: 2px 4px; border-radius: 4px; }
+  .nrow .nname:hover { background: #2e2e38; }
+  .nrow.sel .nname { background: #2563eb33; outline: 1px solid #2563eb; }
+  .nrow .dot { width: 11px; height: 11px; border-radius: 3px; flex: none; border: 1px solid rgba(255,255,255,.3); }
+  .nrow .sz { color: #889; font-size: 11px; flex: none; }
+  .nrow textarea { width: 100%; background: #15151a; color: #eee; border: 1px solid #4a4a55; border-radius: 4px;
+                   padding: 4px 6px; font-size: 12.5px; font-family: inherit; resize: vertical; line-height: 1.45;
+                   margin-top: 4px; }
+  .nrow .clab { font-size: 11px; color: #889; margin-top: 4px; }
   #panel h3 { font-size: 13px; margin: 4px 0 8px; color: #9ab; }
   #panel label { display: block; font-size: 12px; color: #aaa; margin: 6px 0 2px; }
   #panel input[type=text], #panel input[type=number], #panel select, #panel textarea {
@@ -279,6 +296,7 @@
     <button id="btnMeasure">📏 量測</button>
     <button id="btnUndo" title="上一步（Ctrl+Z）">↩ 復原</button>
     <button id="btnRedo" title="下一步（Ctrl+Y 或 Ctrl+Shift+Z）">↪ 重做</button>
+    <button id="btnNotes" title="總筆記：所有物件備註彙整於左側，可直接編輯">📝 筆記</button>
     <span class="spacer"></span>
     <button id="btnPanel" class="active">🛋 物件</button>
     <button id="btnExport">匯出</button>
@@ -288,6 +306,11 @@
     <input type="file" id="fileImport" accept=".json" style="display:none">
   </header>
   <div id="main">
+    <div id="notesPanel">
+      <h3>📝 總筆記（物件備註彙整）</h3>
+      <div class="nhint">與設計師溝通用：所有物件備註集中檢視、直接編輯（即時儲存）；點物件名稱可選取定位。</div>
+      <div id="notesList"></div>
+    </div>
     <div id="stage"></div>
     <div id="scene3d">
       <div id="viewport"><div id="world">
@@ -1517,7 +1540,7 @@ function rotateVertSel() {
 function refreshAll() {
   settleGravity(); redrawFurniture2d(); rebuildBoxes();
   if (typeof updateCeilPlane === 'function') updateCeilPlane();
-  renderList(); syncPanel(); saveState();
+  renderList(); renderNotes(); syncPanel(); saveState();
 }
 
 /* ============ Ctrl+C / Ctrl+V 複製貼上 ============ */
@@ -1740,6 +1763,47 @@ function renderList() {
   });
 }
 function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+/* ============ 總筆記（左側）：所有物件備註彙整＋直接編輯（與設計師溝通用） ============ */
+var notesPanel = document.getElementById('notesPanel');
+function renderNotes() {
+  if (!notesPanel.classList.contains('open')) return;
+  if (notesPanel.contains(document.activeElement)) return;   // 編輯中不重繪（避免游標被打斷）
+  var box = $('notesList');
+  box.innerHTML = furniture.length ? '' : '<div class="nhint">尚未放置任何物件</div>';
+  furniture.forEach(function (f) {
+    var d = document.createElement('div');
+    d.className = 'nrow' + (isSel(f.id) ? ' sel' : '');
+    var nm = document.createElement('div');
+    nm.className = 'nname';
+    nm.innerHTML = '<span class="dot" style="background:' + f.color + '"></span><span class="nm">' +
+                   (esc(f.name) || '（未命名）') + '</span><span class="sz">' +
+                   (isPerson(f) ? f.h + 'cm' : f.w + '×' + f.d + '×' + f.h) + '</span>';
+    nm.addEventListener('click', function () { setSel(f.id); refreshAll(); });
+    d.appendChild(nm);
+    var ta = document.createElement('textarea');
+    ta.rows = f.note ? 2 : 1;
+    ta.placeholder = '（無備註，點此新增）';
+    ta.value = f.note || '';
+    ta.addEventListener('input', function () {
+      if (ta.value) f.note = ta.value; else delete f.note;
+      renderList(); saveState();   // 右側清單 📝 即時同步；本面板因 activeElement 保護不重繪
+    });
+    d.appendChild(ta);
+    if (f.cab) {   // 櫃體備註（f.cab.note）也集中在此編輯
+      var cl = document.createElement('div');
+      cl.className = 'clab'; cl.textContent = '櫃體備註：';
+      d.appendChild(cl);
+      var ca = document.createElement('textarea');
+      ca.rows = 1; ca.placeholder = '（無櫃體備註）'; ca.value = f.cab.note || '';
+      ca.addEventListener('input', function () {
+        if (ca.value) f.cab.note = ca.value; else delete f.cab.note;
+        saveState();
+      });
+      d.appendChild(ca);
+    }
+    box.appendChild(d);
+  });
+}
 function readForm() {
   return { name: $('fName').value.trim(),   // 可留空
            w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
@@ -2082,6 +2146,11 @@ $('btnPanel').addEventListener('click', function () {
   panel.classList.toggle('open');
   this.classList.toggle('active');
   onResize();
+});
+$('btnNotes').addEventListener('click', function () {
+  notesPanel.classList.toggle('open');
+  this.classList.toggle('active');
+  renderNotes(); onResize();
 });
 
 /* ============ export / import ============ */
@@ -5269,6 +5338,33 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   delFurniture(pp90.id); setSel(null);
   ck('統一入口新增管柱=真管柱(skin/L/釘頂/部件)', ok90,
      '(skin=' + pp90.skin + ', 型式=' + pp90.pipe + ', faces=' + faces90 + ', z=' + r1(pp90.z) + ')');
+  // 91. 總筆記面板（左側）：彙整所有物件備註、直接編輯即時同步、櫃體備註也可編輯、點名稱選取、清空=刪除
+  var n91 = addFurniture({ name: '筆記A', w: 30, d: 30, h: 30, x: 272, y: 800, rot: 0, color: '#607d8b', note: '既有備註' });
+  var n91b = addFurniture({ name: '筆記B', w: 30, d: 30, h: 30, x: 420, y: 800, rot: 0, color: '#8d6e63' });
+  n91b.cab = { t: 2, parts: [], items: [], note: '櫃備' };
+  setSel(null); refreshAll();
+  realClick($('btnNotes'));
+  var rows91 = $('notesList').querySelectorAll('.nrow');
+  var open91 = notesPanel.classList.contains('open') && rows91.length === furniture.length;
+  var taA = rows91[rows91.length - 2].querySelector('textarea');
+  var vA91 = taA.value === '既有備註';                       // 既有備註帶入
+  taA.value = '改過的備註'; taA.dispatchEvent(new Event('input'));
+  var edit91 = byId(n91.id).note === '改過的備註';           // 直接編輯即時寫回
+  var tasB = rows91[rows91.length - 1].querySelectorAll('textarea');
+  var cabTa91 = tasB.length === 2 && tasB[1].value === '櫃備';
+  tasB[1].value = '櫃備2'; tasB[1].dispatchEvent(new Event('input'));
+  var cabEdit91 = n91b.cab.note === '櫃備2';                 // 櫃體備註也可在此編輯
+  rows91[rows91.length - 1].querySelector('.nname').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  var sel91 = selIds.length === 1 && selIds[0] === n91b.id;  // 點名稱＝選取
+  var rows91c = $('notesList').querySelectorAll('.nrow');    // 選取觸發重繪 → 重新查詢
+  var taA2 = rows91c[rows91c.length - 2].querySelector('textarea');
+  taA2.value = ''; taA2.dispatchEvent(new Event('input'));
+  var del91 = !byId(n91.id).note;                            // 清空＝移除備註
+  realClick($('btnNotes'));
+  var close91 = !notesPanel.classList.contains('open');
+  delFurniture(n91.id); delFurniture(n91b.id); setSel(null);
+  ck('總筆記面板(彙整/編輯/櫃體備註/點選/清空)', open91 && vA91 && edit91 && cabTa91 && cabEdit91 && sel91 && del91 && close91,
+     '(開=' + open91 + ', 帶入=' + vA91 + ', 編輯=' + edit91 + ', 櫃備=' + (cabTa91 && cabEdit91) + ', 點選=' + sel91 + ', 清空=' + del91 + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();

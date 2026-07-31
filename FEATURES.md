@@ -47,6 +47,13 @@
 
 - 調色盤（#fColor input type=color，取代舊 16 色格）：選取物件即時套用、面板同步顯示 hex。
 
+## 總筆記面板（左側）
+
+- header「📝 筆記」btnNotes 切換 #notesPanel（#main 首個 flex 子元素、寬 264、border-right；toggle 後 onResize）。
+- renderNotes()：每物件一列（色點+名稱+尺寸+textarea；f.cab 另有櫃體備註 textarea）；點名稱＝setSel+refreshAll；
+  textarea input 即時寫回 f.note / f.cab.note（清空＝delete）＋renderList+saveState。
+- **輸入中不重繪**：renderNotes 若 activeElement 在面板內直接 return（游標保護）；refreshAll 內掛 renderNotes。
+
 ## 備註
 
 - 物件 f.note（面板 #fNote textarea）與櫃體 f.cab.note（Modal #cabNote）皆為自由文字，
