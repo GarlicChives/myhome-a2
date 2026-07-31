@@ -40,14 +40,28 @@ PointerEvent 拖曳、堆疊、全部規則情境，且涵蓋所有物件種類�
 6. 更新本檔（斷言數、功能索引）、`FEATURES.md` 對應節、必要時 `A2戶型-圖面解析.md`、auto-memory。
 7. 交付後 `git add -A && git commit`。**永久規則：`git push` 與部署必須等使用者明確下令才可執行**
    ——commit 完成後回報「已就緒，等指令 push」，收到指令才 push 並以 live URL 重跑 selftest。
-8. Claude in Chrome 擴充每次可再試 `list_connected_browsers`（使用者 profile：`Profile 11`／小譁
-   v4578469@gmail.com；成功即可實機操作驗證＋以文字取代截圖驗證）。
+8. **Claude in Chrome 已於 2026-07-31 連通**（deviceId 9f8498d7-c392-4dce-a14e-fb05391e325a／
+   "Browser 1"）：連線程序＝`list_connected_browsers` → AskUserQuestion 讓使用者選 → `select_browser`
+   → `tabs_context_mcp`。詳見下節「實機瀏覽器驗證」。
 
 驗證指令（PowerShell 用 `Start-Process -Wait`，直接 `&` 呼叫常拿不到檔案）：
 ```
 chrome --headless --disable-gpu --screenshot=x.png --window-size=1440,900 --virtual-time-budget=6000 "file:///D:/Desktop/MyHome/A2戶型居家模擬.html?selftest=1[&st=3d|light|grid|sel|panel|tut|ceil|cab]"
 ```
 chrome 路徑：`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`。全 PASS 時 title=ST-PASS。
+
+## 實機瀏覽器驗證（Claude in Chrome；優先於 headless 截圖）
+
+- **擴充功能不能開 `file://`**（回 "unparseable URL"）→ 先起本機伺服器再連：
+  `python -m http.server 8777 --bind 127.0.0.1`（cwd＝D:\Desktop\MyHome，Bash 工具背景執行），
+  網址 `http://127.0.0.1:8777/A2%E6%88%B6%E5%9E%8B%E5%B1%85%E5%AE%B6%E6%A8%A1%E6%93%AC.html`。
+- **selftest 驗證用 javascript_tool 讀文字，不要截圖**（省 ~10 倍 token）：
+  `?selftest=1` → 讀 `document.title`＋`#selftestBadge` 文字，過濾 `FAIL` 開頭行、回報項數。
+- **功能驗證同樣走 javascript_tool 回傳物件**（例：新增物件後回 `{尺寸,離地,型式,顏色}`），
+  比截圖精準且便宜；截圖只在「使用者抱怨的是外觀」時拍一張，必要時用 `computer.zoom` 裁切放大。
+- **⚠ 嚴禁在使用者常用 origin 跑 `?selftest=1`**：selftest 會 `localStorage.clear()`，
+  在 live URL（garlicchives.github.io）或使用者慣用的 file:// 頁面上跑會**清掉他的存檔配置**。
+  一律用 `127.0.0.1:8777` 這個獨立 origin 做測試（localStorage 分離、不影響使用者資料）。
 
 ## 檔案結構
 
