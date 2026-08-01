@@ -382,15 +382,6 @@
           </div>
         </div>
       </div>
-      <label>圓弧角（cm；指定角落半徑，0=直角；上限=較短邊一半）</label>
-      <div class="dimrow">
-        <div><label>左前</label><input type="number" id="fRc0" value="0" min="0" step="1"></div>
-        <div><label>右前</label><input type="number" id="fRc1" value="0" min="0" step="1"></div>
-      </div>
-      <div class="dimrow">
-        <div><label>右後</label><input type="number" id="fRc2" value="0" min="0" step="1"></div>
-        <div><label>左後</label><input type="number" id="fRc3" value="0" min="0" step="1"></div>
-      </div>
       <label>顏色（調色盤）</label>
       <div class="colorrow">
         <input type="color" id="fColor" value="#c9a227">
@@ -513,19 +504,11 @@
           <div class="btnrow"><button id="cabDelPart">🗑 刪除隔板</button></div>
         </div>
         <div id="cabItemEdit" style="display:none">
-          <h3>物品編輯（點選中的物品）</h3>
-          <label>名稱</label>
-          <input type="text" id="ciName" maxlength="12">
+          <h3>物品編輯（點選中的物品；尺寸/顏色用上方共用欄位）</h3>
           <div class="dimrow">
-            <div><label>長（cm）</label><input type="number" id="ciW" min="1"></div>
-            <div><label>寬（cm）</label><input type="number" id="ciD" min="1"></div>
-          </div>
-          <div class="dimrow">
-            <div><label>高（cm）</label><input type="number" id="ciH" min="1"></div>
+            <div><label>名稱</label><input type="text" id="ciName" maxlength="12"></div>
             <div><label>深度位置（cm）</label><input type="number" id="ciY" min="0"></div>
           </div>
-          <label>顏色</label>
-          <div class="colorrow"><input type="color" id="ciColor"></div>
           <div id="cabDist"></div>
           <div class="btnrow">
             <button id="ciRot" title="旋轉90°（長↔寬互換）">⟳ 旋轉</button>
@@ -1545,7 +1528,6 @@ function addFurniture(o) {
   if (o.note) f.note = o.note;                                   // 備註（自由文字）
   if (o.pipe) { f.pipe = o.pipe; f.pipeT = o.pipeT || PIPE_T; if (o.pipeUp) f.pipeUp = true; }  // 管柱型式／管徑／翻轉向上
   if (o.hang) f.hang = JSON.parse(JSON.stringify(o.hang));       // 管柱掛件
-  if (o.rc && (o.rc[0] || o.rc[1] || o.rc[2] || o.rc[3])) f.rc = o.rc.slice();   // 圓弧角
   if (o.cab) f.cab = JSON.parse(JSON.stringify(o.cab));          // 櫃體資料（隔板/物品）
   if (isPerson(f)) f.z = 0;   // 人物不可離地
   if (f.z + f.h > CEIL) {   // 新增高度不可超過天花板
@@ -1629,7 +1611,7 @@ function doCopy() {
   var f = getSel(); if (!f) return false;
   clipF = { name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, rot: f.rot, color: f.color, kind: f.kind, weight: f.weight,
             skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp,
-            hang: f.hang, rc: f.rc };
+            hang: f.hang };
   showHint('已複製：' + (f.name || '（未命名）') + '（Ctrl+V 貼上）');
   return true;
 }
@@ -1638,8 +1620,7 @@ function doPaste() {
   var base = getSel();
   var o = { name: uniqueName(clipF.name), w: clipF.w, d: clipF.d, h: clipF.h, z: clipF.z, rot: clipF.rot,
             color: clipF.color, kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab,
-            pipe: clipF.pipe, pipeT: clipF.pipeT, pipeUp: clipF.pipeUp, hang: clipF.hang,
-            rc: clipF.rc };   // 貼上：不重名、不帶備註
+            pipe: clipF.pipe, pipeT: clipF.pipeT, pipeUp: clipF.pipeUp, hang: clipF.hang };   // 貼上：不重名、不帶備註
   if (base) { o.x = base.x + 30; o.y = base.y + 30; }
   else { o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2; }
   var nf = addFurniture(o);
@@ -1657,15 +1638,9 @@ function redrawFurniture2d() {
     var bad = isBad(f);
     var g = el('g', { transform: 'translate(' + f.x + ' ' + f.y + ') rotate(' + f.rot + ')',
                       'data-fid': f.id, cursor: 'move' }, furnLayer);
-    var rectCls = 'furn-rect' + (isSel(f.id) ? ' sel' : '') + (bad ? ' colliding' : '');
-    if (f.rc && !isPerson(f)) {   // 圓弧角俯視輪廓（指定角落）
-      el('path', { d: rcPath(f.w, f.d, f.rc), fill: f.color, 'fill-opacity': 0.55,
-                   'stroke-width': isSel(f.id) ? 2 : 1.5, 'class': rectCls }, g);
-    } else {
-      el('rect', { x: -f.w / 2, y: -f.d / 2, width: f.w, height: f.d, rx: isPerson(f) ? 12 : 2,
-                   fill: f.color, 'fill-opacity': 0.55, 'stroke-width': isSel(f.id) ? 2 : 1.5,
-                   'class': rectCls }, g);
-    }
+    el('rect', { x: -f.w / 2, y: -f.d / 2, width: f.w, height: f.d, rx: isPerson(f) ? 12 : 2,
+                 fill: f.color, 'fill-opacity': 0.55, 'stroke-width': isSel(f.id) ? 2 : 1.5,
+                 'class': 'furn-rect' + (isSel(f.id) ? ' sel' : '') + (bad ? ' colliding' : '') }, g);
     if (isPerson(f)) {   // 俯視：肩膀＋頭圓
       el('circle', { cx: 0, cy: 0, r: Math.max(6, Math.min(11, f.d / 2 - 2)), fill: 'rgba(255,255,255,.3)',
                      'class': 'furn-rect', 'stroke-width': 1 }, g);
@@ -1815,8 +1790,7 @@ function syncPanel() {
     ? '編輯：' + (f.name || '（未命名）') + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
     : '新增物件（家具／家電…）';
   if (f) {   // 使用者正在輸入的欄位不回寫（避免游標被打斷）
-    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot, fNote: f.note || '',
-              fRc0: f.rc ? f.rc[0] : 0, fRc1: f.rc ? f.rc[1] : 0, fRc2: f.rc ? f.rc[2] : 0, fRc3: f.rc ? f.rc[3] : 0 };
+    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot, fNote: f.note || '' };
     for (var k in m) { var elk = $(k); if (document.activeElement !== elk) elk.value = m[k]; }
     if (document.activeElement !== $('fColor') && /^#[0-9a-fA-F]{6}$/.test(f.color)) {
       $('fColor').value = f.color;
@@ -1900,29 +1874,10 @@ function renderNotes() {
   });
 }
 function readForm() {
-  var o = { name: $('fName').value.trim(),   // 可留空
-            w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
-            h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
-            rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
-  o.rc = readRc(o.w, o.d);
-  return o;
-}
-// 圓弧角 [左前,右前,右後,左後]（cm；上限=較短邊一半）；全 0 回傳 null
-function readRc(w, d) {
-  var lim = Math.min(w, d) / 2;
-  var rc = ['fRc0', 'fRc1', 'fRc2', 'fRc3'].map(function (id) { return clampN($(id).value, 0, lim, 0); });
-  return (rc[0] || rc[1] || rc[2] || rc[3]) ? rc : null;
-}
-// 圓弧角 CSS（頂/底面 border-radius；面座標 TL=左後 TR=右後 BR=右前 BL=左前）
-function rcCss(rc) { return rc ? rc[3] + 'px ' + rc[2] + 'px ' + rc[1] + 'px ' + rc[0] + 'px' : ''; }
-// 圓弧角 2D 路徑（local 中心原點；+y=前）
-function rcPath(w, d, rc) {
-  var x0 = -w / 2, y0 = -d / 2, x1 = w / 2, y1 = d / 2;
-  var lf = rc[0], rf = rc[1], rb = rc[2], lb = rc[3];
-  return 'M' + (x0 + lb) + ' ' + y0 + 'H' + (x1 - rb) + 'A' + rb + ' ' + rb + ' 0 0 1 ' + x1 + ' ' + (y0 + rb) +
-         'V' + (y1 - rf) + 'A' + rf + ' ' + rf + ' 0 0 1 ' + (x1 - rf) + ' ' + y1 +
-         'H' + (x0 + lf) + 'A' + lf + ' ' + lf + ' 0 0 1 ' + x0 + ' ' + (y1 - lf) +
-         'V' + (y0 + lb) + 'A' + lb + ' ' + lb + ' 0 0 1 ' + (x0 + lb) + ' ' + y0 + 'Z';
+  return { name: $('fName').value.trim(),   // 可留空
+           w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
+           h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
+           rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
 }
 function clampN(v, lo, hi, dflt) { v = +v; if (isNaN(v)) return dflt; return Math.max(lo, Math.min(hi, v)); }
 // 複製時避免重複命名：茶几→茶几2→茶几3…（空名稱不處理）
@@ -2037,11 +1992,17 @@ var SKIN3D = {
   dishdryer: function (f, box, cls) { applianceSkin(f, box, cls, '#90a4ae', 0.5); },
   oven:      function (f, box, cls) { applianceSkin(f, box, cls, '#212121', 0.82); },
   microwave: function (f, box, cls) { applianceSkin(f, box, cls, '#455a64', 0.5); },
-  cooker: function (f, box, cls) {   // 大同電鍋：圓鍋身（可改色）＋不鏽鋼頂蓋/蓋鈕（固定色，如實品）
-    var bodyH = f.h * 0.72, lidH = f.h * 0.2;
-    box(f.w, f.d, bodyH, f.z, '', 0, 0, f.color, '50%');
-    box(f.w * 0.94, f.d * 0.94, lidH, f.z + bodyH, '', 0, 0, 'linear-gradient(#d4d9de, #a9b0b6)', '50%');
-    box(f.w * 0.22, f.d * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9ced3', '50%');
+  cooker: function (f, box, cls, cyl) {   // 大同電鍋：真圓柱鍋身（可改色）＋不鏽鋼圓頂蓋/蓋鈕（固定色，如實品）
+    var bodyH = f.h * 0.72, lidH = f.h * 0.2, dia = Math.min(f.w, f.d);
+    if (cyl) {
+      cyl(dia, bodyH, f.z, '', 0, 0, f.color);
+      cyl(dia * 0.94, lidH, f.z + bodyH, '', 0, 0, '#c3c9cf');
+      cyl(dia * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9ced3');
+    } else {   // 櫃內縮圖等無 cyl 環境：退回圓角箱
+      box(f.w, f.d, bodyH, f.z, '', 0, 0, f.color, '50%');
+      box(f.w * 0.94, f.d * 0.94, lidH, f.z + bodyH, '', 0, 0, '#c3c9cf', '50%');
+      box(f.w * 0.22, f.d * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9ced3', '50%');
+    }
   },
   table: function (f, box, cls) {
     var t = Math.max(3, Math.min(5, f.h * 0.08)), lw = Math.max(4, Math.min(8, f.w * 0.05));
@@ -2120,9 +2081,15 @@ var SKIN3D = {
     box(f.w, f.d, 2, f.z + (f.h - 2) * 0.55, '', 0, 0, shade(f.color, 1.05));
     box(f.w, f.d, 2, f.z + f.h - 2, cls);
   },
-  trash: function (f, box, cls) {   // 圓筒垃圾桶（俯視圓形）
-    box(f.w - 3, f.d - 3, f.h - 3, f.z, '', 0, 0, null, '50%');
-    box(f.w, f.d, 3, f.z + f.h - 3, cls, 0, 0, shade(f.color, 0.7), '50%');
+  trash: function (f, box, cls, cyl) {   // 圓筒垃圾桶（真圓柱＋深色桶口環）
+    var dia = Math.min(f.w, f.d);
+    if (cyl) {
+      cyl(dia - 3, f.h - 3, f.z, '', 0, 0, f.color);
+      cyl(dia, 3, f.z + f.h - 3, cls, 0, 0, shade(f.color, 0.7));
+    } else {
+      box(f.w - 3, f.d - 3, f.h - 3, f.z, '', 0, 0, null, '50%');
+      box(f.w, f.d, 3, f.z + f.h - 3, cls, 0, 0, shade(f.color, 0.7), '50%');
+    }
   },
   projector: function (f, box, cls) {
     box(f.w, f.d, f.h - 1, f.z + 1, cls);
@@ -2163,14 +2130,15 @@ var HANG_KINDS = [
   { k: 'utensil', name: '廚具(鏟/勺)',  w: 8,  d: 3,  h: 30, color: '#8d8d8d' },
   { k: 'pot',     name: '鍋子',         w: 26, d: 22, h: 16, color: '#4e5a63' }
 ];
-SKIN3D.pipe = function (f, box, cls) {   // 管柱：直/L/U（部件由 pipeParts 推導）＋掛件
+SKIN3D.pipe = function (f, box, cls, cyl) {   // 管柱：直/L/U（部件由 pipeParts 推導）＋掛件
   pipeParts(f).forEach(function (p, i) {
     box(p.bw, p.bd, p.bh, f.z + p.bz, i === 0 ? cls : '', p.cx, 0,
         i === 0 ? f.color : shade(f.color, 0.88));
   });
   var bi = hangBarInfo(f);
-  if (bi && f.hang) f.hang.forEach(function (g) {   // 掛件：頂端貼吊桿底、往下垂（鍋=圓形）
-    box(g.w, g.d, g.h, f.z + bi.bz - g.h, '', -f.w / 2 + g.x, 0, g.color, g.k === 'pot' ? '50%' : '');
+  if (bi && f.hang) f.hang.forEach(function (g) {   // 掛件：頂端貼吊桿底、往下垂（鍋=真圓柱）
+    if (g.k === 'pot' && cyl) cyl(Math.min(g.w, g.d), g.h, f.z + bi.bz - g.h, '', -f.w / 2 + g.x, 0, g.color);
+    else box(g.w, g.d, g.h, f.z + bi.bz - g.h, '', -f.w / 2 + g.x, 0, g.color, g.k === 'pot' ? '50%' : '');
   });
 };
 function addBuiltin(k, x, y) {
@@ -2219,7 +2187,6 @@ function addBuiltin(k, x, y) {
     if (!fill) return;
     $('fName').value = fill.name; $('fW').value = fill.w; $('fD').value = fill.d;
     $('fH').value = fill.h; $('fZ').value = fill.z; $('fR').value = 0;
-    $('fRc0').value = 0; $('fRc1').value = 0; $('fRc2').value = 0; $('fRc3').value = 0;   // 內建物件不帶圓角
     curColor = fill.color; $('fColor').value = fill.color; $('fColorHex').textContent = fill.color;
     refreshAll();
     showHint('已帶入「' + fill.name + '」預設尺寸，可修改後按「➕ 新增」');
@@ -2230,7 +2197,6 @@ function liveApply() {
   var f = getSel(); if (!f) return;
   var o = readForm();
   f.name = o.name; f.w = o.w; f.d = o.d; f.rot = o.rot;
-  if (o.rc) f.rc = o.rc; else delete f.rc;   // 圓弧角
   if (o.note) f.note = o.note; else delete f.note;
   f.z = isPerson(f) ? 0 : o.z;
   var clamped = setHeight(f, o.h);
@@ -2240,7 +2206,7 @@ function liveApply() {
     showHint('高度已限制：整疊不可超過天花板 ' + CEIL + ' cm（此件上限 ' + f.h + '）');
   } else if (isInvalid(f)) showHint('目前尺寸/位置與牆或家具重疊（紅框），請調整');
 }
-['fName', 'fW', 'fD', 'fH', 'fZ', 'fR', 'fNote', 'fRc0', 'fRc1', 'fRc2', 'fRc3'].forEach(function (id) {
+['fName', 'fW', 'fD', 'fH', 'fZ', 'fR', 'fNote'].forEach(function (id) {
   $(id).addEventListener('input', function () { if (getSel()) liveApply(); });
 });
 // 管柱型式／管徑：選取中的管柱即時套用（不影響其他物件規則）
@@ -2258,7 +2224,7 @@ $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
   addFurniture({ name: uniqueName(f.name), w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot,
                  color: f.color, kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab,   // 複製：不重名、不帶備註
-                 pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp, hang: f.hang, rc: f.rc });
+                 pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp, hang: f.hang });
 });
 $('btnStack').addEventListener('click', function () {
   var f = getSel(); if (!f || isPerson(f)) return;
@@ -2982,6 +2948,27 @@ function rebuildBoxes() {
       if (rr) { faces[0].style.borderRadius = rr; faces[1].style.borderRadius = rr; }   // 圓角：頂/底面（俯視輪廓該圓就圓）
       faces.forEach(function (fc) { fc.style.background = bad ? '#d32f2f' : (col || f.color); b.appendChild(fc); });
     }
+    // 真圓柱（N 面近似）：頂/底圓面＋N 片側板（大同電鍋/垃圾桶等圓形物件擬真用）
+    function addCyl(dia, dh, bz, cls, cx, cy, col, n) {
+      cx = cx || 0; cy = cy || 0; n = n || 10;
+      var r5 = dia / 2, chord = 2 * r5 * Math.sin(Math.PI / n), apo = r5 * Math.cos(Math.PI / n);
+      var cap = [
+        faceDiv(dia, dia, 'translate3d(' + (cx - r5) + 'px,' + (cy - r5) + 'px,' + (bz + dh) + 'px)', 1, cls),
+        faceDiv(dia, dia, 'translate3d(' + (cx - r5) + 'px,' + (cy - r5) + 'px,' + bz + 'px)', 0.5, '')
+      ];
+      cap.forEach(function (fc) {
+        fc.style.borderRadius = '50%';
+        fc.style.background = bad ? '#d32f2f' : (col || f.color);
+        b.appendChild(fc);
+      });
+      for (var i5 = 0; i5 < n; i5++) {
+        var sh5 = 0.58 + 0.32 * Math.abs(Math.cos(i5 * Math.PI / n * 2));   // 側板依角度明暗（立體感）
+        var pf = faceDiv(chord + 0.4, dh, 'translate3d(' + cx + 'px,' + cy + 'px,' + bz + 'px) rotateZ(' +
+                         (i5 * 360 / n) + 'deg) translate3d(' + (-(chord + 0.4) / 2) + 'px,' + (-apo) + 'px,0) rotateX(90deg)', sh5, '');
+        pf.style.background = bad ? '#d32f2f' : (col || f.color);
+        b.appendChild(pf);
+      }
+    }
     if (isPerson(f)) {   // 人形：頭、軀幹、雙手、雙腳（人體比例：腿47%、軀幹39%、頭14%）
       var headH = Math.round(h * 0.14), legH = Math.round(h * 0.47);
       var torsoH = h - headH - legH;
@@ -3029,10 +3016,10 @@ function rebuildBoxes() {
         }
         for (var q2 = n0; q2 < b.children.length; q2++) b.children[q2].setAttribute('data-ci', ii2);   // 供 3D 懸停辨識物品
       });
-    } else if (f.skin && SKIN3D[f.skin]) {   // 內建物件外觀（本質仍是長寬高箱體）
-      SKIN3D[f.skin](f, addBox, topCls);
+    } else if (f.skin && SKIN3D[f.skin]) {   // 內建物件外觀（本質仍是長寬高箱體；addCyl 供圓柱擬真）
+      SKIN3D[f.skin](f, addBox, topCls, addCyl);
     } else {
-      addBox(w, d, h, z0, topCls, 0, 0, null, f.rc ? rcCss(f.rc) : '');   // 圓弧角（頂/底面輪廓）
+      addBox(w, d, h, z0, topCls);
     }
     // 薄件隱形抓取把手：任一維 <12cm（管柱 3.4cm 在螢幕僅 ~4px 幾乎點不到）→ 附加透明放大 hitbox
     // 僅供指標互動（data-bid 繼承自外層 box3d），不影響碰撞/尺寸/渲染
@@ -3624,9 +3611,9 @@ function syncCabPanel() {
   }
   if (cabSelI >= 0) {
     var it = cabF.cab.items[cabSelI];
-    var m2 = { ciName: it.name, ciW: it.w, ciD: it.d, ciH: it.h, ciY: it.y };
+    var m2 = { ciName: it.name, ciAddW: it.w, ciAddD: it.d, ciAddH: it.h, ciY: it.y };
     for (var k2 in m2) { var e2 = $(k2); if (document.activeElement !== e2) e2.value = m2[k2]; }
-    if (document.activeElement !== $('ciColor')) $('ciColor').value = /^#[0-9a-fA-F]{6}$/.test(it.color || '') ? it.color : '#c9a227';
+    if (document.activeElement !== $('ciAddColor')) $('ciAddColor').value = /^#[0-9a-fA-F]{6}$/.test(it.color || '') ? it.color : '#c9a227';
     var bad = cabItemBad(cabF, it), dd = cabItemDists(cabF, it);
     $('cabDist').textContent = bad ? '⚠ 放不下：超出內部空間或與隔板/物品重疊' :
       '距離｜左 ' + r1(dd.left) + '｜右 ' + r1(dd.right) + '｜上 ' + r1(dd.up) +
@@ -3764,8 +3751,10 @@ BUILTINS.forEach(function (b) {   // 放置物品種類：自訂＋內建物件
 $('cabAddKind').addEventListener('change', function () {
   var bk = BUILTINS.find(function (b) { return b.k === this.value; }, this);
   if (bk) {
+    if (cabSelI >= 0) { cabSelI = -1; renderCab(); }   // 選種類＝進入新增模式（共用欄位改為新增輸入，不再編輯選取物品）
     $('ciAddW').value = bk.w; $('ciAddD').value = bk.d; $('ciAddH').value = bk.h;
     $('ciAddColor').value = bk.color;
+    syncCabPanel();
   }
 });
 /* 放置物品新增規則：須先選「放置格」且格內空間足夠（尺寸＋剩餘體積）；
@@ -3852,15 +3841,16 @@ $('cbMat').addEventListener('change', function () {
   if (scB.mat === 'glass' && !scB.color) scB.color = '#8ecae6';   // 玻璃預設淡藍
   cabCommit();
 });
-['ciName', 'ciW', 'ciD', 'ciH', 'ciY'].forEach(function (id) {
+// 共用尺寸/顏色欄（ciAdd*）：選取物品＝即時編輯該物品；未選取＝新增前的輸入數值
+['ciName', 'ciAddW', 'ciAddD', 'ciAddH', 'ciY'].forEach(function (id) {
   $(id).addEventListener('input', function () {
     if (!cabF || cabSelI < 0) return;
     var it = cabF.cab.items[cabSelI];
     var prev = { w: it.w, d: it.d, h: it.h, y: it.y, z: it.z };
     it.name = $('ciName').value;
-    it.w = clampN($('ciW').value, 1, 2000, it.w);
-    it.d = clampN($('ciD').value, 1, 2000, it.d);
-    it.h = clampN($('ciH').value, 1, 600, it.h);
+    it.w = clampN($('ciAddW').value, 1, 2000, it.w);
+    it.d = clampN($('ciAddD').value, 1, 2000, it.d);
+    it.h = clampN($('ciAddH').value, 1, 600, it.h);
     it.y = clampN($('ciY').value, 0, 2000, it.y);
     it.z = r1(cabItemFloor(cabF, it));
     if (cabItemBad(cabF, it)) {   // 超出放置空間（內徑/隔板/其他物品）→ 禁止並警示、還原前值
@@ -3872,8 +3862,8 @@ $('cbMat').addEventListener('change', function () {
     cabCommit();
   });
 });
-// 櫃內物品顏色：即時套用（skin 物品同步換色）
-$('ciColor').addEventListener('input', function () {
+// 共用顏色欄：選取物品＝即時換色（skin 物品同步）；未選取＝新增用預設色
+$('ciAddColor').addEventListener('input', function () {
   if (!cabF || cabSelI < 0) return;
   cabF.cab.items[cabSelI].color = this.value;
   cabCommit();
@@ -4041,7 +4031,7 @@ function endCabPtr(e) {
     var lx4 = lp3.x + cabF.w / 2 - inn4.x0, lz4 = lp3.z + cabF.h / 2 - inn4.z0;
     var cell4 = (lx4 >= -0.01 && lx4 <= inn4.iw + 0.01 && lz4 >= -0.01 && lz4 <= inn4.ih + 0.01)
                 ? cabCellAt(cabF, lx4, lz4) : null;
-    if (cell4) { cabSelCell = { xi: cell4.xi, zi: cell4.zi }; cabSelS = null; }
+    if (cell4) { cabSelCell = { xi: cell4.xi, zi: cell4.zi }; cabSelS = null; cabSelI = -1; cabSelP = -1; }   // 選格＝新增模式（共用欄位轉為新增輸入）
     else if (cabPtr.sb) { cabSelS = cabPtr.sb; cabSelCell = null; cabSelP = -1; cabSelI = -1; }
     else cabSelCell = null;
     renderCab(); syncCabPanel();
@@ -4858,9 +4848,9 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   it0.z = 100; it0.z = r1(cabItemFloor(bi, it0));   // 放開等效：落於第1層隔板頂 58.7+1=59.7
   var dropOk = Math.abs(it0.z - 59.7) < 0.05;
   cabSelI = 0; cabSelP = -1; syncCabPanel();
-  $('ciH').value = 60; $('ciH').dispatchEvent(new Event('input'));   // 頂119.7 與上層隔板重疊 → 2026-08-01 新規則：禁止並還原+警示
+  $('ciAddH').value = 60; $('ciAddH').dispatchEvent(new Event('input'));   // 頂119.7 與上層隔板重疊 → 2026-08-01 新規則：禁止並還原+警示
   var badOk = it0.h === 30 && $('hint').textContent.indexOf('超出放置空間') !== -1;
-  $('ciH').value = 40; $('ciH').dispatchEvent(new Event('input'));   // 頂99.7 → 可放
+  $('ciAddH').value = 40; $('ciAddH').dispatchEvent(new Event('input'));   // 頂99.7 → 可放
   var fitOk = it0.h === 40 && cabItemBad(bi, it0) === false && Math.abs(cabItemDists(bi, it0).up - 17.1) < 0.05 &&
               $('cabDist').textContent.indexOf('左 16.8') !== -1;
   $('cabClose').click();
@@ -5270,9 +5260,9 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var it71 = pc71.cab.items[0];
   var c71 = pc71.cab.items.length === 1 && Math.abs(it71.x - 38) < 0.01 && it71.z === 0;
   cabSelI = 0; cabSelP = -1; syncCabPanel();           // 放大至幾乎塞滿格（70×36×45＝113400 cm³）
-  $('ciW').value = 70; $('ciW').dispatchEvent(new Event('input'));
-  $('ciD').value = 36; $('ciD').dispatchEvent(new Event('input'));
-  $('ciH').value = 45; $('ciH').dispatchEvent(new Event('input'));
+  $('ciAddW').value = 70; $('ciAddW').dispatchEvent(new Event('input'));
+  $('ciAddD').value = 36; $('ciAddD').dispatchEvent(new Event('input'));
+  $('ciAddH').value = 45; $('ciAddH').dispatchEvent(new Event('input'));
   var d71 = !cabItemBad(pc71, it71);
   $('cabAddKind').value = 'trash';                     // 30×30×40：尺寸放得下、體積 36000 > 剩 22336 → 拒絕
   $('cabAddKind').dispatchEvent(new Event('change'));
@@ -5750,6 +5740,7 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('cabAddKind').value = '';
   $('ciAddW').value = 30; $('ciAddD').value = 20; $('ciAddH').value = 10;
   $('cabAddItem').click();
+  cabSelI = -1; renderCab(); syncCabPanel();               // 共用欄位改回新增模式（新增後會自動選取新物品）
   $('ciAddW').value = 16; $('ciAddD').value = 16; $('ciAddH').value = 24;
   $('cabAddItem').click();
   var iA93 = cb93.cab.items[0], iB93 = cb93.cab.items[1];
@@ -5775,9 +5766,9 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   var cb94 = boxHost.querySelector('[data-bid="' + ck94.id + '"]');
   var f94 = cb94 ? cb94.children.length : 0;
   setMode(false);
-  var ok94 = ck94.skin === 'cooker' && ck94.w === 32 && ck94.d === 32 && ck94.h === 30 && f94 === 18;
+  var ok94 = ck94.skin === 'cooker' && ck94.w === 32 && ck94.d === 32 && ck94.h === 30 && f94 === 36;   // 3 圓柱×(頂底2+側板10)
   delFurniture(ck94.id); setSel(null);
-  ck('內建大同電鍋(32×32×30+3部件外皮)', ok94, '(faces=' + f94 + ')');
+  ck('內建大同電鍋(32×32×30+真圓柱3件)', ok94, '(faces=' + f94 + ')');
   // 95. 內建廚房家電：烘碗機 45×35×25／烤箱 54×42×33／微波爐 51×40×30（本體+門+把手外皮）
   var ok95 = true, det95 = [];
   [['dishdryer', 45, 35, 25], ['oven', 54, 42, 33], ['microwave', 51, 40, 30]].forEach(function (sp) {
@@ -5883,11 +5874,11 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('cabAddItem').click();
   cabSelI = 0; renderCab(); syncCabPanel();
   var it99 = e99.cab.items[0];
-  $('ciColor').value = '#123456'; $('ciColor').dispatchEvent(new Event('input'));
+  $('ciAddColor').value = '#123456'; $('ciAddColor').dispatchEvent(new Event('input'));
   var col99 = it99.color === '#123456';
-  $('ciW').value = 40; $('ciW').dispatchEvent(new Event('input'));
+  $('ciAddW').value = 40; $('ciAddW').dispatchEvent(new Event('input'));
   var leg99 = it99.w === 40;
-  $('ciW').value = 500; $('ciW').dispatchEvent(new Event('input'));
+  $('ciAddW').value = 500; $('ciAddW').dispatchEvent(new Event('input'));
   var blk99 = it99.w === 40 && $('hint').textContent.indexOf('超出放置空間') !== -1;
   $('cabClose').click(); delFurniture(e99.id); setSel(null);
   ck('櫃內物品編輯(顏色/合法生效/超界阻擋警示)', col99 && leg99 && blk99,
@@ -5914,25 +5905,6 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   setMode(false);
   delFurniture(hp100.id); setSel(null);
   ck('擬真外皮圓形(電鍋/垃圾桶/安全帽/掛鍋)', round100 && pot100, '(' + rd100.join(', ') + ', 鍋=' + pot100 + ')');
-  // 101. 圓弧角：UI→f.rc、上限=短邊一半、3D 頂面對映(左後 右後 右前 左前)、2D path、複製傳遞
-  var rcO = addFurniture({ name: '圓角櫃', w: 60, d: 40, h: 50, x: 272, y: 800, rot: 0, color: '#607d8b' });
-  setSel(rcO.id); syncPanel();
-  $('fRc0').value = 10; $('fRc0').dispatchEvent(new Event('input'));   // 左前 10
-  $('fRc2').value = 99; $('fRc2').dispatchEvent(new Event('input'));   // 右後 99 → 夾限 20
-  var rc101 = byId(rcO.id).rc;
-  var rcOk = rc101 && rc101[0] === 10 && rc101[1] === 0 && rc101[2] === 20 && rc101[3] === 0;
-  setMode(true);
-  var tf101 = boxHost.querySelector('[data-bid="' + rcO.id + '"] .face');
-  var css101 = tf101 && tf101.style.borderRadius === '0px 20px 0px 10px';   // TL左後 TR右後 BR右前 BL左前
-  setMode(false);
-  var path101 = !!furnLayer.querySelector('[data-fid="' + rcO.id + '"] path');
-  $('btnDup').click();
-  var rcD = furniture[furniture.length - 1];
-  var dup101 = rcD.rc && rcD.rc[0] === 10 && rcD.rc[2] === 20;
-  delFurniture(rcD.id); delFurniture(rcO.id); setSel(null);
-  ['fRc0', 'fRc1', 'fRc2', 'fRc3'].forEach(function (id4) { $(id4).value = 0; });
-  ck('圓弧角(UI/夾限/3D對映/2D path/複製)', rcOk && css101 && path101 && dup101,
-     '(rc=' + JSON.stringify(rc101) + ', 3D=' + css101 + ', 2D=' + path101 + ', 複製=' + dup101 + ')');
   // 102. 放置格選取＝外圍顯示內徑標示（已扣殼板2/隔板2：寬76/高47/深38）
   var s102 = addFurniture({ name: '格標櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
   setSel(s102.id); refreshAll(); openCab(s102);
