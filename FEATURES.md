@@ -68,6 +68,15 @@
   **電視 112×7×65＝50 吋壁掛**（tv，外框+螢幕；A2 沙發→主臥隔間牆視距 ~263cm 適配，已依實測放入譁.json
   x496.5/y708/z90/rot90 貼牆）。**鞋子改一雙 24×20×9**（兩隻並排 6 部件）。共 22 種、#builtinSel 25 options。
 
+## 圓弧角（f.rc）
+
+- 面板「圓弧角」4 欄＝[左前,右前,右後,左後] cm（clamp 0..min(w,d)/2，readRc；全 0＝無 rc）。
+- 3D：plain box 頂/底面 border-radius（rcCss 對映 CSS 角序 TL=左後/TR=右後/BR=右前/BL=左前）；
+  2D：rcPath 逐角圓弧 path（半徑 0 之 A 指令依 SVG 規格退化為直線）。skin/cab/人物/管柱不套用。
+- 碰撞仍用 OBB（圓角僅視覺）；rc 隨 copy/dup/addFurniture/存檔傳遞。
+- **擬真外皮**：addBox 第 9 參數 rr（頂/底面 border-radius）——電鍋（頂蓋/蓋鈕固定不鏽鋼色、
+  鍋身可改色）/垃圾桶/安全帽/掛件鍋子=圓形；人頭 45%。cab Modal 內 skin 未套 rr（僅主 3D）。
+
 ## 管柱掛件（f.hang）
 
 - selBar 對管柱顯示「🪝 掛件」（btnHangOpen；🗄 櫃體隱藏、openCab 對 pipe 直接 return）。
@@ -144,6 +153,10 @@
 
 ## 櫃體編輯 Modal
 
+- **櫃內物品編輯（2026-08-01 二補）**：#ciColor 顏色欄即時套用；ci 尺寸輸入若 cabItemBad
+  →**禁止並還原前值＋警示「超出放置空間」**（舊「顯紅允許」規則作廢，測試 50 已改寫）。
+- **放置格內徑標示**：選取放置格時於格外圍顯示「內徑寬/高/深」（cabLblInto 三標籤；
+  數值＝cabCells 區間＝已扣殼板 2cm 與隔板厚，斷言 76/47/38 驗證）。
 - **櫃內物品旋轉/倒轉（2026-08-01）**：選取物品後側欄「⟳ 旋轉」（長↔寬）/「⤵ 倒轉」（寬↔高），
   cabItemSwapDims：互換→cabItemFloor 落回支撐面→cabItemBad 則整組還原；
   **拖曳物品覆蓋另一物品＝自動調換位置**（endCabPtr item 分支：x/z 區間重疊偵測→雙方互換位置各自落定，

@@ -377,6 +377,15 @@
           </div>
         </div>
       </div>
+      <label>圓弧角（cm；指定角落半徑，0=直角；上限=較短邊一半）</label>
+      <div class="dimrow">
+        <div><label>左前</label><input type="number" id="fRc0" value="0" min="0" step="1"></div>
+        <div><label>右前</label><input type="number" id="fRc1" value="0" min="0" step="1"></div>
+      </div>
+      <div class="dimrow">
+        <div><label>右後</label><input type="number" id="fRc2" value="0" min="0" step="1"></div>
+        <div><label>左後</label><input type="number" id="fRc3" value="0" min="0" step="1"></div>
+      </div>
       <label>顏色（調色盤）</label>
       <div class="colorrow">
         <input type="color" id="fColor" value="#c9a227">
@@ -509,6 +518,8 @@
             <div><label>高（cm）</label><input type="number" id="ciH" min="1"></div>
             <div><label>深度位置（cm）</label><input type="number" id="ciY" min="0"></div>
           </div>
+          <label>顏色</label>
+          <div class="colorrow"><input type="color" id="ciColor"></div>
           <div id="cabDist"></div>
           <div class="btnrow">
             <button id="ciRot" title="旋轉90°（長↔寬互換）">⟳ 旋轉</button>
@@ -1514,6 +1525,7 @@ function addFurniture(o) {
   if (o.note) f.note = o.note;                                   // 備註（自由文字）
   if (o.pipe) { f.pipe = o.pipe; f.pipeT = o.pipeT || PIPE_T; if (o.pipeUp) f.pipeUp = true; }  // 管柱型式／管徑／翻轉向上
   if (o.hang) f.hang = JSON.parse(JSON.stringify(o.hang));       // 管柱掛件
+  if (o.rc && (o.rc[0] || o.rc[1] || o.rc[2] || o.rc[3])) f.rc = o.rc.slice();   // 圓弧角
   if (o.cab) f.cab = JSON.parse(JSON.stringify(o.cab));          // 櫃體資料（隔板/物品）
   if (isPerson(f)) f.z = 0;   // 人物不可離地
   if (f.z + f.h > CEIL) {   // 新增高度不可超過天花板
@@ -1596,7 +1608,8 @@ var clipF = null;
 function doCopy() {
   var f = getSel(); if (!f) return false;
   clipF = { name: f.name, w: f.w, d: f.d, h: f.h, z: f.z, rot: f.rot, color: f.color, kind: f.kind, weight: f.weight,
-            skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp, hang: f.hang };
+            skin: f.skin, cab: f.cab, note: f.note, pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp,
+            hang: f.hang, rc: f.rc };
   showHint('已複製：' + (f.name || '（未命名）') + '（Ctrl+V 貼上）');
   return true;
 }
@@ -1605,7 +1618,8 @@ function doPaste() {
   var base = getSel();
   var o = { name: uniqueName(clipF.name), w: clipF.w, d: clipF.d, h: clipF.h, z: clipF.z, rot: clipF.rot,
             color: clipF.color, kind: clipF.kind, weight: clipF.weight, skin: clipF.skin, cab: clipF.cab,
-            pipe: clipF.pipe, pipeT: clipF.pipeT, pipeUp: clipF.pipeUp, hang: clipF.hang };   // 貼上：不重名、不帶備註
+            pipe: clipF.pipe, pipeT: clipF.pipeT, pipeUp: clipF.pipeUp, hang: clipF.hang,
+            rc: clipF.rc };   // 貼上：不重名、不帶備註
   if (base) { o.x = base.x + 30; o.y = base.y + 30; }
   else { o.x = vb.x + vb.w / 2; o.y = vb.y + vb.h / 2; }
   var nf = addFurniture(o);
@@ -1623,9 +1637,15 @@ function redrawFurniture2d() {
     var bad = isBad(f);
     var g = el('g', { transform: 'translate(' + f.x + ' ' + f.y + ') rotate(' + f.rot + ')',
                       'data-fid': f.id, cursor: 'move' }, furnLayer);
-    el('rect', { x: -f.w / 2, y: -f.d / 2, width: f.w, height: f.d, rx: isPerson(f) ? 12 : 2,
-                 fill: f.color, 'fill-opacity': 0.55, 'stroke-width': isSel(f.id) ? 2 : 1.5,
-                 'class': 'furn-rect' + (isSel(f.id) ? ' sel' : '') + (bad ? ' colliding' : '') }, g);
+    var rectCls = 'furn-rect' + (isSel(f.id) ? ' sel' : '') + (bad ? ' colliding' : '');
+    if (f.rc && !isPerson(f)) {   // 圓弧角俯視輪廓（指定角落）
+      el('path', { d: rcPath(f.w, f.d, f.rc), fill: f.color, 'fill-opacity': 0.55,
+                   'stroke-width': isSel(f.id) ? 2 : 1.5, 'class': rectCls }, g);
+    } else {
+      el('rect', { x: -f.w / 2, y: -f.d / 2, width: f.w, height: f.d, rx: isPerson(f) ? 12 : 2,
+                   fill: f.color, 'fill-opacity': 0.55, 'stroke-width': isSel(f.id) ? 2 : 1.5,
+                   'class': rectCls }, g);
+    }
     if (isPerson(f)) {   // 俯視：肩膀＋頭圓
       el('circle', { cx: 0, cy: 0, r: Math.max(6, Math.min(11, f.d / 2 - 2)), fill: 'rgba(255,255,255,.3)',
                      'class': 'furn-rect', 'stroke-width': 1 }, g);
@@ -1775,7 +1795,8 @@ function syncPanel() {
     ? '編輯：' + (f.name || '（未命名）') + (selIds.length > 1 ? '（已多選 ' + selIds.length + ' 件）' : '')
     : '新增物件（家具／家電…）';
   if (f) {   // 使用者正在輸入的欄位不回寫（避免游標被打斷）
-    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot, fNote: f.note || '' };
+    var m = { fName: f.name, fW: f.w, fD: f.d, fH: f.h, fZ: f.z, fR: f.rot, fNote: f.note || '',
+              fRc0: f.rc ? f.rc[0] : 0, fRc1: f.rc ? f.rc[1] : 0, fRc2: f.rc ? f.rc[2] : 0, fRc3: f.rc ? f.rc[3] : 0 };
     for (var k in m) { var elk = $(k); if (document.activeElement !== elk) elk.value = m[k]; }
     if (document.activeElement !== $('fColor') && /^#[0-9a-fA-F]{6}$/.test(f.color)) {
       $('fColor').value = f.color;
@@ -1853,10 +1874,29 @@ function renderNotes() {
   });
 }
 function readForm() {
-  return { name: $('fName').value.trim(),   // 可留空
-           w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
-           h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
-           rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
+  var o = { name: $('fName').value.trim(),   // 可留空
+            w: clampN($('fW').value, 1, 2000, 60), d: clampN($('fD').value, 1, 2000, 60),
+            h: clampN($('fH').value, 1, 600, 60), z: clampN($('fZ').value, 0, 600, 0),
+            rot: +$('fR').value || 0, color: curColor, note: $('fNote').value };
+  o.rc = readRc(o.w, o.d);
+  return o;
+}
+// 圓弧角 [左前,右前,右後,左後]（cm；上限=較短邊一半）；全 0 回傳 null
+function readRc(w, d) {
+  var lim = Math.min(w, d) / 2;
+  var rc = ['fRc0', 'fRc1', 'fRc2', 'fRc3'].map(function (id) { return clampN($(id).value, 0, lim, 0); });
+  return (rc[0] || rc[1] || rc[2] || rc[3]) ? rc : null;
+}
+// 圓弧角 CSS（頂/底面 border-radius；面座標 TL=左後 TR=右後 BR=右前 BL=左前）
+function rcCss(rc) { return rc ? rc[3] + 'px ' + rc[2] + 'px ' + rc[1] + 'px ' + rc[0] + 'px' : ''; }
+// 圓弧角 2D 路徑（local 中心原點；+y=前）
+function rcPath(w, d, rc) {
+  var x0 = -w / 2, y0 = -d / 2, x1 = w / 2, y1 = d / 2;
+  var lf = rc[0], rf = rc[1], rb = rc[2], lb = rc[3];
+  return 'M' + (x0 + lb) + ' ' + y0 + 'H' + (x1 - rb) + 'A' + rb + ' ' + rb + ' 0 0 1 ' + x1 + ' ' + (y0 + rb) +
+         'V' + (y1 - rf) + 'A' + rf + ' ' + rf + ' 0 0 1 ' + (x1 - rf) + ' ' + y1 +
+         'H' + (x0 + lf) + 'A' + lf + ' ' + lf + ' 0 0 1 ' + x0 + ' ' + (y1 - lf) +
+         'V' + (y0 + lb) + 'A' + lb + ' ' + lb + ' 0 0 1 ' + (x0 + lb) + ' ' + y0 + 'Z';
 }
 function clampN(v, lo, hi, dflt) { v = +v; if (isNaN(v)) return dflt; return Math.max(lo, Math.min(hi, v)); }
 // 複製時避免重複命名：茶几→茶几2→茶几3…（空名稱不處理）
@@ -1960,9 +2000,9 @@ function applianceSkin(f, box, cls, doorCol, hRatio) {
 }
 var SKIN3D = {
   // 廚房家電共用外皮：本體＋前門面板（+y 正面）＋把手。doorCol/handleTop 依機種微調
-  helmet: function (f, box, cls) {   // 全罩式安全帽：帽體＋前方鏡片（+y 正面）
-    box(f.w, f.d, f.h, f.z, cls);
-    box(f.w * 0.78, 1.4, f.h * 0.34, f.z + f.h * 0.42, '', 0, f.d / 2 - 0.7, 'rgba(40,48,60,0.9)');
+  helmet: function (f, box, cls) {   // 全罩式安全帽：圓帽體＋前方鏡片（+y 正面）
+    box(f.w, f.d, f.h, f.z, cls, 0, 0, null, '46%');
+    box(f.w * 0.78, 1.4, f.h * 0.34, f.z + f.h * 0.42, '', 0, f.d / 2 - 0.7, 'rgba(40,48,60,0.9)', '30%');
   },
   tv: function (f, box, cls) {       // 電視：外框＋螢幕面（+y 正面）
     box(f.w, f.d, f.h, f.z, cls);
@@ -1971,11 +2011,11 @@ var SKIN3D = {
   dishdryer: function (f, box, cls) { applianceSkin(f, box, cls, '#90a4ae', 0.5); },
   oven:      function (f, box, cls) { applianceSkin(f, box, cls, '#212121', 0.82); },
   microwave: function (f, box, cls) { applianceSkin(f, box, cls, '#455a64', 0.5); },
-  cooker: function (f, box, cls) {   // 大同電鍋：鍋身＋淺色上蓋＋蓋鈕（比例縮放）
+  cooker: function (f, box, cls) {   // 大同電鍋：圓鍋身（可改色）＋不鏽鋼頂蓋/蓋鈕（固定色，如實品）
     var bodyH = f.h * 0.72, lidH = f.h * 0.2;
-    box(f.w, f.d, bodyH, f.z, '', 0, 0, f.color);
-    box(f.w * 0.94, f.d * 0.94, lidH, f.z + bodyH, '', 0, 0, shade(f.color, 1.25));
-    box(f.w * 0.22, f.d * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9c9c9');
+    box(f.w, f.d, bodyH, f.z, '', 0, 0, f.color, '50%');
+    box(f.w * 0.94, f.d * 0.94, lidH, f.z + bodyH, '', 0, 0, 'linear-gradient(#d4d9de, #a9b0b6)', '50%');
+    box(f.w * 0.22, f.d * 0.22, f.h - bodyH - lidH, f.z + bodyH + lidH, cls, 0, 0, '#c9ced3', '50%');
   },
   table: function (f, box, cls) {
     var t = Math.max(3, Math.min(5, f.h * 0.08)), lw = Math.max(4, Math.min(8, f.w * 0.05));
@@ -2054,9 +2094,9 @@ var SKIN3D = {
     box(f.w, f.d, 2, f.z + (f.h - 2) * 0.55, '', 0, 0, shade(f.color, 1.05));
     box(f.w, f.d, 2, f.z + f.h - 2, cls);
   },
-  trash: function (f, box, cls) {
-    box(f.w - 3, f.d - 3, f.h - 3, f.z, '');
-    box(f.w, f.d, 3, f.z + f.h - 3, cls, 0, 0, shade(f.color, 0.7));
+  trash: function (f, box, cls) {   // 圓筒垃圾桶（俯視圓形）
+    box(f.w - 3, f.d - 3, f.h - 3, f.z, '', 0, 0, null, '50%');
+    box(f.w, f.d, 3, f.z + f.h - 3, cls, 0, 0, shade(f.color, 0.7), '50%');
   },
   projector: function (f, box, cls) {
     box(f.w, f.d, f.h - 1, f.z + 1, cls);
@@ -2103,8 +2143,8 @@ SKIN3D.pipe = function (f, box, cls) {   // 管柱：直/L/U（部件由 pipePar
         i === 0 ? f.color : shade(f.color, 0.88));
   });
   var bi = hangBarInfo(f);
-  if (bi && f.hang) f.hang.forEach(function (g) {   // 掛件：頂端貼吊桿底、往下垂
-    box(g.w, g.d, g.h, f.z + bi.bz - g.h, '', -f.w / 2 + g.x, 0, g.color);
+  if (bi && f.hang) f.hang.forEach(function (g) {   // 掛件：頂端貼吊桿底、往下垂（鍋=圓形）
+    box(g.w, g.d, g.h, f.z + bi.bz - g.h, '', -f.w / 2 + g.x, 0, g.color, g.k === 'pot' ? '50%' : '');
   });
 };
 function addBuiltin(k, x, y) {
@@ -2153,6 +2193,7 @@ function addBuiltin(k, x, y) {
     if (!fill) return;
     $('fName').value = fill.name; $('fW').value = fill.w; $('fD').value = fill.d;
     $('fH').value = fill.h; $('fZ').value = fill.z; $('fR').value = 0;
+    $('fRc0').value = 0; $('fRc1').value = 0; $('fRc2').value = 0; $('fRc3').value = 0;   // 內建物件不帶圓角
     curColor = fill.color; $('fColor').value = fill.color; $('fColorHex').textContent = fill.color;
     refreshAll();
     showHint('已帶入「' + fill.name + '」預設尺寸，可修改後按「➕ 新增」');
@@ -2163,6 +2204,7 @@ function liveApply() {
   var f = getSel(); if (!f) return;
   var o = readForm();
   f.name = o.name; f.w = o.w; f.d = o.d; f.rot = o.rot;
+  if (o.rc) f.rc = o.rc; else delete f.rc;   // 圓弧角
   if (o.note) f.note = o.note; else delete f.note;
   f.z = isPerson(f) ? 0 : o.z;
   var clamped = setHeight(f, o.h);
@@ -2172,7 +2214,7 @@ function liveApply() {
     showHint('高度已限制：整疊不可超過天花板 ' + CEIL + ' cm（此件上限 ' + f.h + '）');
   } else if (isInvalid(f)) showHint('目前尺寸/位置與牆或家具重疊（紅框），請調整');
 }
-['fName', 'fW', 'fD', 'fH', 'fZ', 'fR', 'fNote'].forEach(function (id) {
+['fName', 'fW', 'fD', 'fH', 'fZ', 'fR', 'fNote', 'fRc0', 'fRc1', 'fRc2', 'fRc3'].forEach(function (id) {
   $(id).addEventListener('input', function () { if (getSel()) liveApply(); });
 });
 // 管柱型式／管徑：選取中的管柱即時套用（不影響其他物件規則）
@@ -2190,7 +2232,7 @@ $('btnDup').addEventListener('click', function () {
   var f = getSel(); if (!f) return;
   addFurniture({ name: uniqueName(f.name), w: f.w, d: f.d, h: f.h, z: f.z, x: f.x + 30, y: f.y + 30, rot: f.rot,
                  color: f.color, kind: f.kind, weight: f.weight, skin: f.skin, cab: f.cab,   // 複製：不重名、不帶備註
-                 pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp, hang: f.hang });
+                 pipe: f.pipe, pipeT: f.pipeT, pipeUp: f.pipeUp, hang: f.hang, rc: f.rc });
 });
 $('btnStack').addEventListener('click', function () {
   var f = getSel(); if (!f || isPerson(f)) return;
@@ -2901,7 +2943,7 @@ function rebuildBoxes() {
     b.style.transform = 'translate3d(' + (f.x - W / 2) + 'px,' + (f.y - H / 2) + 'px,0) rotateZ(' + f.rot + 'deg)';
     var w = f.w, d = f.d, h = f.h, z0 = f.z;
     var topCls = (isSel(f.id) ? 'sel' : '') + (bad ? ' bad' : '');
-    function addBox(bw, bd, bh, bz, cls, cx, cy, col) {
+    function addBox(bw, bd, bh, bz, cls, cx, cy, col, rr) {
       cx = cx || 0; cy = cy || 0;
       var faces = [
         faceDiv(bw, bd, 'translate3d(' + (cx - bw / 2) + 'px,' + (cy - bd / 2) + 'px,' + (bz + bh) + 'px)', 1, cls),
@@ -2911,6 +2953,7 @@ function rebuildBoxes() {
         faceDiv(bd, bh, 'translate3d(' + (cx + bw / 2) + 'px,' + (cy - bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.66, ''),
         faceDiv(bd, bh, 'translate3d(' + (cx - bw / 2) + 'px,' + (cy - bd / 2) + 'px,' + bz + 'px) rotateZ(90deg) rotateX(90deg)', 0.62, '')
       ];
+      if (rr) { faces[0].style.borderRadius = rr; faces[1].style.borderRadius = rr; }   // 圓角：頂/底面（俯視輪廓該圓就圓）
       faces.forEach(function (fc) { fc.style.background = bad ? '#d32f2f' : (col || f.color); b.appendChild(fc); });
     }
     if (isPerson(f)) {   // 人形：頭、軀幹、雙手、雙腳（人體比例：腿47%、軀幹39%、頭14%）
@@ -2926,7 +2969,7 @@ function rebuildBoxes() {
       addBox(torsoW, d, torsoH, z0 + legH, '');                                                    // 軀幹
       addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', -(torsoW / 2 + armW / 2));    // 左臂
       addBox(armW, d * 0.7, armLen, z0 + legH + torsoH - armLen, '', (torsoW / 2 + armW / 2));     // 右臂
-      addBox(headW, Math.min(22, d), headH, z0 + legH + torsoH, topCls);                           // 頭
+      addBox(headW, Math.min(22, d), headH, z0 + legH + torsoH, topCls, 0, 0, null, '45%');        // 頭（圓）
     } else if (hasCab(f)) {   // 櫃體＝空心殼（正面＝+y 開放；殼板可個別移除；板材可自訂色/玻璃/洞洞板）
       var inn = cabInner(f), TS = CAB_TS;
       var ix = -w / 2 + inn.x0;                                    // 內左緣（local x）
@@ -2952,8 +2995,8 @@ function rebuildBoxes() {
         var icx = ix + it.x, icy = d / 2 - inn.y0 - it.y, iz = z0 + inn.z0 + it.z;
         if (!bad2 && it.skin && SKIN3D[it.skin]) {   // 內建物件放入櫃內：以外皮呈現
           SKIN3D[it.skin]({ w: it.w, d: it.d, h: it.h, z: iz, color: it.color || '#c9a227' },
-            function (bw, bd, bh, bz, cls2, cx2, cy2, col2) {
-              addBox(bw, bd, bh, bz, '', (cx2 || 0) + icx, (cy2 || 0) + icy, col2 || it.color || '#c9a227');
+            function (bw, bd, bh, bz, cls2, cx2, cy2, col2, rr2) {
+              addBox(bw, bd, bh, bz, '', (cx2 || 0) + icx, (cy2 || 0) + icy, col2 || it.color || '#c9a227', rr2);
             }, '');
         } else {
           addBox(it.w, it.d, it.h, iz, '', icx, icy, bad2 ? '#d32f2f' : it.color || '#c9a227');
@@ -2963,7 +3006,7 @@ function rebuildBoxes() {
     } else if (f.skin && SKIN3D[f.skin]) {   // 內建物件外觀（本質仍是長寬高箱體）
       SKIN3D[f.skin](f, addBox, topCls);
     } else {
-      addBox(w, d, h, z0, topCls);
+      addBox(w, d, h, z0, topCls, 0, 0, null, f.rc ? rcCss(f.rc) : '');   // 圓弧角（頂/底面輪廓）
     }
     // 薄件隱形抓取把手：任一維 <12cm（管柱 3.4cm 在螢幕僅 ~4px 幾乎點不到）→ 附加透明放大 hitbox
     // 僅供指標互動（data-bid 繼承自外層 box3d），不影響碰撞/尺寸/渲染
@@ -3484,11 +3527,17 @@ function renderCab() {
     if (p.dir === 'h') cabBoxInto(inn.iw, inn.idp, p.t, ix + inn.iw / 2, shelfCy, zo + inn.z0 + p.pos - p.t / 2, pcol, cls, { 'data-pi': i });
     else cabBoxInto(p.t, inn.idp, inn.ih, ix + p.pos, shelfCy, zo + inn.z0, pcol, cls, { 'data-pi': i });
   });
-  var selCellR = cabSelCellRect();   // 選取中的放置格：綠色虛線高亮（不擋點擊）
+  var selCellR = cabSelCellRect();   // 選取中的放置格：綠色虛線高亮（不擋點擊）＋外圍內徑標示
   if (selCellR) {
-    var cb2 = cabBoxInto(selCellR.x1 - selCellR.x0, inn.idp, selCellR.z1 - selCellR.z0,
+    var cw5 = selCellR.x1 - selCellR.x0, ch5 = selCellR.z1 - selCellR.z0;
+    var cb2 = cabBoxInto(cw5, inn.idp, ch5,
         ix + (selCellR.x0 + selCellR.x1) / 2, shelfCy, zo + inn.z0 + selCellR.z0, 'rgba(46,204,113,.10)', 'csel');
     cb2.style.pointerEvents = 'none';
+    // 內徑標示（已扣殼板/隔板厚度）：寬（格頂上方）、高（格左側）、深（格前緣）
+    var ccx5 = ix + (selCellR.x0 + selCellR.x1) / 2, czm5 = zo + inn.z0 + (selCellR.z0 + selCellR.z1) / 2;
+    cabLblInto(ccx5, shelfCy, zo + inn.z0 + selCellR.z1 + 6, '內徑寬 ' + r1(cw5));
+    cabLblInto(ix + selCellR.x0 - 6, shelfCy, czm5, '內徑高 ' + r1(ch5));
+    cabLblInto(ccx5, shelfCy + inn.idp / 2 + 5, zo + inn.z0 + selCellR.z0 + 6, '內徑深 ' + r1(inn.idp));
   }
   f.cab.items.forEach(function (it, i) {
     var bad = cabItemBad(f, it);
@@ -3551,6 +3600,7 @@ function syncCabPanel() {
     var it = cabF.cab.items[cabSelI];
     var m2 = { ciName: it.name, ciW: it.w, ciD: it.d, ciH: it.h, ciY: it.y };
     for (var k2 in m2) { var e2 = $(k2); if (document.activeElement !== e2) e2.value = m2[k2]; }
+    if (document.activeElement !== $('ciColor')) $('ciColor').value = /^#[0-9a-fA-F]{6}$/.test(it.color || '') ? it.color : '#c9a227';
     var bad = cabItemBad(cabF, it), dd = cabItemDists(cabF, it);
     $('cabDist').textContent = bad ? '⚠ 放不下：超出內部空間或與隔板/物品重疊' :
       '距離｜左 ' + r1(dd.left) + '｜右 ' + r1(dd.right) + '｜上 ' + r1(dd.up) +
@@ -3780,14 +3830,27 @@ $('cbMat').addEventListener('change', function () {
   $(id).addEventListener('input', function () {
     if (!cabF || cabSelI < 0) return;
     var it = cabF.cab.items[cabSelI];
+    var prev = { w: it.w, d: it.d, h: it.h, y: it.y, z: it.z };
     it.name = $('ciName').value;
     it.w = clampN($('ciW').value, 1, 2000, it.w);
     it.d = clampN($('ciD').value, 1, 2000, it.d);
     it.h = clampN($('ciH').value, 1, 600, it.h);
     it.y = clampN($('ciY').value, 0, 2000, it.y);
     it.z = r1(cabItemFloor(cabF, it));
+    if (cabItemBad(cabF, it)) {   // 超出放置空間（內徑/隔板/其他物品）→ 禁止並警示、還原前值
+      it.w = prev.w; it.d = prev.d; it.h = prev.h; it.y = prev.y; it.z = prev.z;
+      showHint('❌ 超出放置空間（內徑/隔板/其他物品），已還原');
+      renderCab(); syncCabPanel();
+      return;
+    }
     cabCommit();
   });
+});
+// 櫃內物品顏色：即時套用（skin 物品同步換色）
+$('ciColor').addEventListener('input', function () {
+  if (!cabF || cabSelI < 0) return;
+  cabF.cab.items[cabSelI].color = this.value;
+  cabCommit();
 });
 $('cabDelItem').addEventListener('click', function () {
   if (!cabF || cabSelI < 0) return;
@@ -4769,10 +4832,10 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   it0.z = 100; it0.z = r1(cabItemFloor(bi, it0));   // 放開等效：落於第1層隔板頂 58.7+1=59.7
   var dropOk = Math.abs(it0.z - 59.7) < 0.05;
   cabSelI = 0; cabSelP = -1; syncCabPanel();
-  $('ciH').value = 60; $('ciH').dispatchEvent(new Event('input'));   // 頂119.7 與上層隔板(底116.8)重疊
-  var badOk = cabItemBad(bi, it0) === true && $('cabDist').textContent.indexOf('放不下') !== -1;
+  $('ciH').value = 60; $('ciH').dispatchEvent(new Event('input'));   // 頂119.7 與上層隔板重疊 → 2026-08-01 新規則：禁止並還原+警示
+  var badOk = it0.h === 30 && $('hint').textContent.indexOf('超出放置空間') !== -1;
   $('ciH').value = 40; $('ciH').dispatchEvent(new Event('input'));   // 頂99.7 → 可放
-  var fitOk = cabItemBad(bi, it0) === false && Math.abs(cabItemDists(bi, it0).up - 17.1) < 0.05 &&
+  var fitOk = it0.h === 40 && cabItemBad(bi, it0) === false && Math.abs(cabItemDists(bi, it0).up - 17.1) < 0.05 &&
               $('cabDist').textContent.indexOf('左 16.8') !== -1;
   $('cabClose').click();
   var cabClosed = !cabModal.classList.contains('show') && hasCab(bi);
@@ -5785,6 +5848,76 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   ck('前板(預設刪/加回/玻璃)+六板與隔板尺寸精準', def98 && dim98 && comp98 && cell98 && glass98 && faces98 && back98,
      '(內徑76/96/36=' + dim98 + ', y補償=' + comp98 + ', 切格47|2|47=' + cell98 + ', 玻璃=' + glass98 +
      ', faces=' + mainF98 + ', 復原=' + back98 + ')');
+  // 99. 櫃內物品編輯修復：顏色即時套用＋合法尺寸生效＋超出放置空間→禁止還原並警示
+  var e99 = addFurniture({ name: '編物櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
+  setSel(e99.id); refreshAll(); openCab(e99);
+  cabSelCell = { xi: 0, zi: 0 };
+  $('cabAddKind').value = '';
+  $('ciAddW').value = 30; $('ciAddD').value = 20; $('ciAddH').value = 20;
+  $('cabAddItem').click();
+  cabSelI = 0; renderCab(); syncCabPanel();
+  var it99 = e99.cab.items[0];
+  $('ciColor').value = '#123456'; $('ciColor').dispatchEvent(new Event('input'));
+  var col99 = it99.color === '#123456';
+  $('ciW').value = 40; $('ciW').dispatchEvent(new Event('input'));
+  var leg99 = it99.w === 40;
+  $('ciW').value = 500; $('ciW').dispatchEvent(new Event('input'));
+  var blk99 = it99.w === 40 && $('hint').textContent.indexOf('超出放置空間') !== -1;
+  $('cabClose').click(); delFurniture(e99.id); setSel(null);
+  ck('櫃內物品編輯(顏色/合法生效/超界阻擋警示)', col99 && leg99 && blk99,
+     '(色=' + col99 + ', 生效=' + leg99 + ', 阻擋=' + blk99 + ')');
+  // 100. 擬真外皮：圓形物件頂面 border-radius（電鍋/垃圾桶/安全帽）＋掛件鍋子=圓
+  var rd100 = [];
+  ['cooker', 'trash', 'helmet'].forEach(function (k4) {
+    var a4 = addBuiltin(k4, 272, 800);
+    setMode(true);
+    var tf4 = boxHost.querySelector('[data-bid="' + a4.id + '"] .face');
+    rd100.push(tf4 && tf4.style.borderRadius !== '' ? k4 + '=' + tf4.style.borderRadius : k4 + '=X');
+    setMode(false);
+    delFurniture(a4.id);
+  });
+  var round100 = rd100.every(function (s4) { return s4.indexOf('=X') === -1; });
+  $('fPipe').value = 'L';
+  var hp100 = addBuiltin('pipe', 272, 800);
+  openHang(hp100);
+  $('hangKind').value = 'pot'; realClick($('hangAdd'));
+  realClick($('hangClose'));
+  setMode(true);
+  var potFace = boxHost.querySelector('[data-bid="' + hp100.id + '"]').children[12];   // 2段×6面後＝鍋子首面
+  var pot100 = potFace && potFace.style.borderRadius === '50%';
+  setMode(false);
+  delFurniture(hp100.id); setSel(null);
+  ck('擬真外皮圓形(電鍋/垃圾桶/安全帽/掛鍋)', round100 && pot100, '(' + rd100.join(', ') + ', 鍋=' + pot100 + ')');
+  // 101. 圓弧角：UI→f.rc、上限=短邊一半、3D 頂面對映(左後 右後 右前 左前)、2D path、複製傳遞
+  var rcO = addFurniture({ name: '圓角櫃', w: 60, d: 40, h: 50, x: 272, y: 800, rot: 0, color: '#607d8b' });
+  setSel(rcO.id); syncPanel();
+  $('fRc0').value = 10; $('fRc0').dispatchEvent(new Event('input'));   // 左前 10
+  $('fRc2').value = 99; $('fRc2').dispatchEvent(new Event('input'));   // 右後 99 → 夾限 20
+  var rc101 = byId(rcO.id).rc;
+  var rcOk = rc101 && rc101[0] === 10 && rc101[1] === 0 && rc101[2] === 20 && rc101[3] === 0;
+  setMode(true);
+  var tf101 = boxHost.querySelector('[data-bid="' + rcO.id + '"] .face');
+  var css101 = tf101 && tf101.style.borderRadius === '0px 20px 0px 10px';   // TL左後 TR右後 BR右前 BL左前
+  setMode(false);
+  var path101 = !!furnLayer.querySelector('[data-fid="' + rcO.id + '"] path');
+  $('btnDup').click();
+  var rcD = furniture[furniture.length - 1];
+  var dup101 = rcD.rc && rcD.rc[0] === 10 && rcD.rc[2] === 20;
+  delFurniture(rcD.id); delFurniture(rcO.id); setSel(null);
+  ['fRc0', 'fRc1', 'fRc2', 'fRc3'].forEach(function (id4) { $(id4).value = 0; });
+  ck('圓弧角(UI/夾限/3D對映/2D path/複製)', rcOk && css101 && path101 && dup101,
+     '(rc=' + JSON.stringify(rc101) + ', 3D=' + css101 + ', 2D=' + path101 + ', 複製=' + dup101 + ')');
+  // 102. 放置格選取＝外圍顯示內徑標示（已扣殼板2/隔板2：寬76/高47/深38）
+  var s102 = addFurniture({ name: '格標櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#8d6e63' });
+  setSel(s102.id); refreshAll(); openCab(s102);
+  $('cabAddH').click();                                      // ih96 → 47|2|47
+  cabSelCell = { xi: 0, zi: 0 }; renderCab(); syncCabPanel();
+  var txt102 = cabViewEl.textContent;
+  var lbl102 = txt102.indexOf('內徑寬 76') !== -1 && txt102.indexOf('內徑高 47') !== -1 &&
+               txt102.indexOf('內徑深 38') !== -1;
+  $('cabClose').click(); delFurniture(s102.id); setSel(null);
+  ck('放置格內徑標示(扣板厚76/47/38)', lbl102,
+     '(' + ((txt102.match(/內徑[寬高深] [\d.]+/g) || []).join(', ') || '無標示') + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();
