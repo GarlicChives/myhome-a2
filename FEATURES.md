@@ -74,6 +74,21 @@
   **電視 112×7×65＝50 吋壁掛**（tv，外框+螢幕；A2 沙發→主臥隔間牆視距 ~263cm 適配，已依實測放入譁.json
   x496.5/y708/z90/rot90 貼牆）。**鞋子改一雙 24×20×9**（兩隻並排 6 部件）。共 22 種、#builtinSel 25 options。
 
+## 風格系統（STYLES／styleSel）
+
+- **32 種內建風格**（北歐/無印/Japandi/侘寂/禪風/奶油/韓系奶茶/現代簡約/黑白極簡/高級灰/工業/Loft/
+  中世紀現代/復古70s/Art Deco/輕奢/好萊塢魅力/新古典/法式/美式古典/現代農舍/鄉村/海岸/漢普頓/地中海/
+  熱帶/波希米亞/新中式/復古台式/英倫學院/多巴胺/暗夜現代）；色票依網路實景照片萃取之公開 palette 校準
+  （Japandi=#F4F0E8/#A36844/#606C5A 系、MCM=teal/mustard/orange/olive 實照色票）。
+- **通用語意角色變色邏輯（非戶型特例）**：每風格＝{floor,cabinet,wood,fabric,appliance,primary,secondary,
+  accents[3]}；styleRole(f)：person=不變、pipe/家電 skin=appliance、cab/wardrobe/shoe=cabinet、
+  table/chair/cart/board=wood、bed/sofa=fabric、其餘 skin=accent 輪替(f.id%3)、自訂物件依尺寸
+  （h≥140 或 footprint≥7200→primary、h≥55→secondary、否則 accent）。
+- applyStyle：覆蓋所有 f.color＋cab.sc（玻璃保材質給 #8ecae6）＋隔板(hexShade(cabinet,1.1))＋
+  櫃內物品(accents 輪替)＋掛件(廚具/鍋=appliance、衣物=accents)＋**地板=applyTheme(st.floor) 走主題
+  自訂色路徑**（格線對比自動；驗證用 $('themeColor').value 而非 bgRect.fill——fill 會正規化成 rgb）。
+  一步 pushHistory（Ctrl+Z 可整批復原）；curColor 同步 primary。header #styleSel change 即套用。
+
 ## 擬真外皮（圓柱/圓角）
 
 - **圓弧角（f.rc）功能已於 2026-08-01 依使用者要求移除**（曾實作 UI/3D/2D，後撤下）。

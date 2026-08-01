@@ -12,6 +12,8 @@
            flex-wrap: wrap; z-index: 30; box-shadow: 0 1px 6px rgba(0,0,0,.5); }
   header .brand { font-size: 14px; font-weight: 600; margin-right: 4px; white-space: nowrap; }
   header .brand small { color: #999; font-weight: 400; }
+  header select#styleSel { background: #2a2a33; color: #eee; border: 1px solid #55555f; border-radius: 6px;
+                           padding: 4px 6px; font-size: 12.5px; max-width: 118px; cursor: pointer; }
   .seg { display: flex; border: 1px solid #55555f; border-radius: 6px; overflow: hidden; }
   .seg button { border: none; border-radius: 0; }
   button { background: #33333d; color: #ddd; border: 1px solid #55555f; border-radius: 6px;
@@ -309,6 +311,7 @@
       <button id="btnThemeWood" title="淺暖木紋">木紋</button>
     </div>
     <input type="color" id="themeColor" value="#1c1c22" title="自訂底色（調色盤）">
+    <select id="styleSel" title="一鍵套用內建風格：覆蓋所有物件/櫃體/放置物品/掛件/地板顏色（會覆蓋自訂色，請先存版本）"></select>
     <button id="btnGrid">格線</button>
     <button id="btnDims" class="active">內徑</button>
     <button id="btnEDims" class="active">外徑</button>
@@ -2826,6 +2829,116 @@ $('btnThemeDark').addEventListener('click', function () { applyTheme('dark'); })
 $('btnTheme').addEventListener('click', function () { applyTheme('light'); });
 $('btnThemeWood').addEventListener('click', function () { applyTheme('wood'); });
 $('themeColor').addEventListener('input', function () { applyTheme(this.value); });
+
+/* ============ 風格系統：32 種內建風格一鍵換色（覆蓋所有顏色，通用語意角色配色邏輯） ============
+   變色邏輯＝「語意角色 → 調色盤」而非特定戶型特例：每個風格定義
+   floor(地板)/cabinet(櫃體收納)/wood(木質家具)/fabric(布藝床沙發)/appliance(家電金屬)/
+   primary(大型自訂物)/secondary(中型)/accents[3](小物與櫃內物品輪替)。
+   物件依 skin/結構歸類（styleRole），自訂物件依尺寸分級 → 任何住家配置皆適用。 */
+var STYLES = [
+  { k: 'scandi',    name: '北歐風',        floor: '#d9c9b0', cabinet: '#f4f1ec', wood: '#d7b98e', fabric: '#b9c4cc', appliance: '#eceff1', primary: '#e8e4dd', secondary: '#cfd8dc', accents: ['#88a2b8', '#d9a68a', '#9db89b'] },
+  { k: 'muji',      name: '無印風',        floor: '#cdb391', cabinet: '#f5f0e6', wood: '#c8a06c', fabric: '#e5ded2', appliance: '#f0efeb', primary: '#efe9dd', secondary: '#ddd3c0', accents: ['#a9967a', '#c9bda6', '#8f9d8a'] },
+  { k: 'japandi',   name: 'Japandi',       floor: '#b99b73', cabinet: '#f0ebdf', wood: '#a36844', fabric: '#d5caba', appliance: '#b9b6ae', primary: '#e6e4e0', secondary: '#c19e85', accents: ['#606c5a', '#c67e50', '#354252'] },
+  { k: 'wabisabi',  name: '侘寂風',        floor: '#b3a693', cabinet: '#cfc6b6', wood: '#9a8567', fabric: '#c2b8a6', appliance: '#a8a29a', primary: '#c6bcab', secondary: '#a79c8a', accents: ['#7c7365', '#8d8072', '#5f574b'] },
+  { k: 'zen',       name: '日式禪風',      floor: '#c8b493', cabinet: '#ded4c0', wood: '#8a6a45', fabric: '#b8b09c', appliance: '#a8a49a', primary: '#d5cab4', secondary: '#ada284', accents: ['#6b7a5d', '#8a6a45', '#9aa596'] },
+  { k: 'cream',     name: '奶油風',        floor: '#e2d5c2', cabinet: '#f7efe2', wood: '#dcc19c', fabric: '#f0e2d2', appliance: '#f4efe8', primary: '#f3e9da', secondary: '#e6d8c4', accents: ['#d9b9a3', '#c9c0ae', '#e8cdb7'] },
+  { k: 'milktea',   name: '韓系奶茶',      floor: '#d8c3a5', cabinet: '#efe3d0', wood: '#c8a982', fabric: '#e6d5c0', appliance: '#ece5da', primary: '#e9dcc8', secondary: '#d3bfa4', accents: ['#b08b62', '#dcc8b0', '#9d8a72'] },
+  { k: 'modern',    name: '現代簡約',      floor: '#cfcfcf', cabinet: '#ffffff', wood: '#b0a08c', fabric: '#9aa4ad', appliance: '#dfe3e6', primary: '#f2f2f2', secondary: '#c4c8cc', accents: ['#33475c', '#9aa4ad', '#666e76'] },
+  { k: 'mono',      name: '黑白極簡',      floor: '#e8e8e8', cabinet: '#ffffff', wood: '#d9d9d9', fabric: '#3a3a3a', appliance: '#1f1f1f', primary: '#f5f5f5', secondary: '#cfcfcf', accents: ['#1f1f1f', '#8c8c8c', '#e0e0e0'] },
+  { k: 'grey',      name: '高級灰',        floor: '#b8b8b8', cabinet: '#d8d8d8', wood: '#9a9188', fabric: '#8f959c', appliance: '#a9adb2', primary: '#cfcfcf', secondary: '#a3a7ab', accents: ['#6b7076', '#8f959c', '#4a4f55'] },
+  { k: 'industrial', name: '工業風',       floor: '#6e5e4e', cabinet: '#4a4e54', wood: '#7a5b3a', fabric: '#5c626a', appliance: '#3d4148', primary: '#55595f', secondary: '#6f6a60', accents: ['#b3641f', '#8c9196', '#42556b'] },
+  { k: 'loft',      name: 'Loft 風',       floor: '#8a7a6a', cabinet: '#6f6a63', wood: '#8a5f3c', fabric: '#6b7076', appliance: '#4a4e54', primary: '#7a756d', secondary: '#958e83', accents: ['#b3641f', '#5d6b7a', '#8c8378'] },
+  { k: 'midcentury', name: '中世紀現代',   floor: '#8a5f36', cabinet: '#d8c6a8', wood: '#8a5f36', fabric: '#1f8578', appliance: '#d9d4c8', primary: '#d9cbb2', secondary: '#b98d5f', accents: ['#de6f20', '#e8ab18', '#7d812c'] },
+  { k: 'retro70',   name: '復古 70s',      floor: '#a9713d', cabinet: '#d9b877', wood: '#8a5a2f', fabric: '#b25b2e', appliance: '#cfc39a', primary: '#d3b26f', secondary: '#a9713d', accents: ['#7a7f2f', '#b25b2e', '#5d3f6b'] },
+  { k: 'artdeco',   name: 'Art Deco',      floor: '#3d3a35', cabinet: '#23413c', wood: '#6b4e2f', fabric: '#2f4a6b', appliance: '#c9a24b', primary: '#2f4a44', secondary: '#4a5568', accents: ['#c9a24b', '#8a2f3c', '#3a6b64'] },
+  { k: 'luxury',    name: '輕奢風',        floor: '#cfc6bd', cabinet: '#ece7e1', wood: '#b39a7c', fabric: '#b9aca4', appliance: '#c9b28a', primary: '#e6e0d8', secondary: '#c4bab0', accents: ['#c9b28a', '#8a8f9a', '#6b5f6b'] },
+  { k: 'glam',      name: '好萊塢魅力',    floor: '#4a4048', cabinet: '#503a4f', wood: '#5d4a3f', fabric: '#7a2f4a', appliance: '#c9a24b', primary: '#5d465c', secondary: '#8a6a7f', accents: ['#c9a24b', '#2f4a6b', '#b03060'] },
+  { k: 'neoclassic', name: '新古典',       floor: '#d5c9b8', cabinet: '#efe9df', wood: '#b39a72', fabric: '#a3b1c6', appliance: '#d9d4ca', primary: '#ece5d9', secondary: '#cfc4b2', accents: ['#8a97b1', '#c9b28a', '#9a8f7a'] },
+  { k: 'french',    name: '法式優雅',      floor: '#d9cec0', cabinet: '#f2eee7', wood: '#c9b393', fabric: '#cfc3cf', appliance: '#e9e6e0', primary: '#efe9e2', secondary: '#d8cfc4', accents: ['#a3b1c6', '#c8a2a8', '#b9ad8f'] },
+  { k: 'american',  name: '美式古典',      floor: '#8a6a48', cabinet: '#eae4d8', wood: '#8a5f39', fabric: '#cfc4ae', appliance: '#d7d2c8', primary: '#e2dccf', secondary: '#b9ad99', accents: ['#5d6f5d', '#99502f', '#33475c'] },
+  { k: 'farmhouse', name: '現代農舍',      floor: '#c9b394', cabinet: '#f5f3ee', wood: '#9c7a55', fabric: '#dfdbd2', appliance: '#2f3438', primary: '#efece5', secondary: '#cfc9bd', accents: ['#2f3438', '#8b9a91', '#bfae94'] },
+  { k: 'country',   name: '鄉村風',        floor: '#b78d5e', cabinet: '#f0e8d8', wood: '#a97a4c', fabric: '#b7c3a9', appliance: '#e8e2d4', primary: '#ecdfca', secondary: '#c7b9a0', accents: ['#8fa07a', '#c98d6b', '#a9b8c4'] },
+  { k: 'coastal',   name: '海岸風',        floor: '#e0d5bf', cabinet: '#fafaf6', wood: '#cbb693', fabric: '#7fa3c4', appliance: '#eef1f2', primary: '#f3f2ec', secondary: '#cfdbe2', accents: ['#356a8c', '#a3c4d4', '#d9c9a8'] },
+  { k: 'hamptons',  name: '漢普頓',        floor: '#dcd2bd', cabinet: '#f7f7f2', wood: '#cbb693', fabric: '#9ab4c9', appliance: '#eef0ee', primary: '#f2f2ea', secondary: '#d5dde2', accents: ['#41618a', '#b8c9d4', '#cfc0a3'] },
+  { k: 'medit',     name: '地中海',        floor: '#d9c19b', cabinet: '#f3ede1', wood: '#b98d5f', fabric: '#4f7ba7', appliance: '#ede8de', primary: '#eae3d3', secondary: '#cbb896', accents: ['#2f5d8a', '#c96f3b', '#7fa3a1'] },
+  { k: 'tropical',  name: '熱帶度假',      floor: '#cbb693', cabinet: '#f2ecd9', wood: '#a9825a', fabric: '#3f7d5d', appliance: '#ece7d8', primary: '#ede6d0', secondary: '#c4b58f', accents: ['#2f7d5d', '#e0a52f', '#4f9a8c'] },
+  { k: 'boho',      name: '波希米亞',      floor: '#a9713d', cabinet: '#d9c19b', wood: '#8a5a2f', fabric: '#8a3b4a', appliance: '#c9b28a', primary: '#caa66f', secondary: '#a9713d', accents: ['#8a3b4a', '#5d6b3f', '#c98d2f'] },
+  { k: 'newchinese', name: '新中式',       floor: '#7a5230', cabinet: '#4f3a2a', wood: '#6b4a2c', fabric: '#9a3b2f', appliance: '#8f8a80', primary: '#5d4634', secondary: '#8a7458', accents: ['#9a3b2f', '#3f5d4a', '#c9a24b'] },
+  { k: 'twretro',   name: '復古台式',      floor: '#b8b3a5', cabinet: '#3f6b5d', wood: '#8a5f39', fabric: '#6b8f9a', appliance: '#cfc9b8', primary: '#5d8a7a', secondary: '#b8b3a5', accents: ['#9a4f3f', '#3f5d8a', '#c9a24b'] },
+  { k: 'academia',  name: '英倫學院',      floor: '#6b4a2c', cabinet: '#4f3a2a', wood: '#5d442c', fabric: '#3f5d4a', appliance: '#8a8578', primary: '#5d4a35', secondary: '#8a7458', accents: ['#7a2f2f', '#2f4a3f', '#c9a24b'] },
+  { k: 'dopamine',  name: '多巴胺繽紛',    floor: '#f2e8d9', cabinet: '#fdf6e8', wood: '#e8b34b', fabric: '#ef6f9a', appliance: '#f7f1e6', primary: '#fce8c8', secondary: '#a8d8c8', accents: ['#ef6f9a', '#4fa3e0', '#8ecb6b'] },
+  { k: 'darkmodern', name: '暗夜現代',     floor: '#3a3f46', cabinet: '#2b2f35', wood: '#5d4a3a', fabric: '#3f4a5d', appliance: '#22262b', primary: '#33383f', secondary: '#4a505a', accents: ['#3fa7a3', '#6b7ffb', '#e0556b'] }
+];
+// 十六進位亮度縮放（shade 的 hex 版；styleApply 需寫回 #hex 供調色盤同步）
+function hexShade(hex, k5) {
+  var m5 = /^#([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m5) return hex;
+  var n5 = parseInt(m5[1], 16);
+  function c5(v) { return Math.max(0, Math.min(255, Math.round(v * k5))); }
+  function h2(v) { return ('0' + v.toString(16)).slice(-2); }
+  return '#' + h2(c5(n5 >> 16 & 255)) + h2(c5(n5 >> 8 & 255)) + h2(c5(n5 & 255));
+}
+// 語意角色歸類（通用，不依戶型）：人物不換色
+var STYLE_WOOD = { table: 1, chair: 1, cart: 1, board: 1 };
+var STYLE_FABRIC = { bed: 1, sofa: 1 };
+var STYLE_APPL = { fridge: 1, oven: 1, microwave: 1, dishdryer: 1, projector: 1, tv: 1 };
+function styleRole(f) {
+  if (isPerson(f)) return null;
+  if (f.pipe) return 'appliance';
+  if (f.cab || f.skin === 'wardrobe' || f.skin === 'shoe') return 'cabinet';
+  if (f.skin) {
+    if (STYLE_WOOD[f.skin]) return 'wood';
+    if (STYLE_FABRIC[f.skin]) return 'fabric';
+    if (STYLE_APPL[f.skin]) return 'appliance';
+    return 'accent';   // cooker/luggage/carryon/laundry/trash/shoes/helmet…＝彩色點綴
+  }
+  // 自訂物件依尺寸分級：高櫃/大型=primary、中型=secondary、小物=accent
+  if (f.h >= 140 || f.w * f.d >= 7200) return 'primary';
+  if (f.h >= 55) return 'secondary';
+  return 'accent';
+}
+function styleColorFor(st, f) {
+  var role = styleRole(f);
+  if (!role) return null;
+  if (role === 'accent') return st.accents[f.id % st.accents.length];
+  return st[role];
+}
+function applyStyle(key) {
+  var st = null;
+  STYLES.forEach(function (s) { if (s.k === key) st = s; });
+  if (!st) return;
+  furniture.forEach(function (f, fi) {
+    var c = styleColorFor(st, f);
+    if (c) f.color = c;
+    if (f.cab) {   // 櫃體：殼板/隔板隨櫃色階、櫃內物品輪替點綴色（玻璃保材質只調色）
+      if (f.cab.sc) Object.keys(f.cab.sc).forEach(function (k6) {
+        if (f.cab.sc[k6].color) f.cab.sc[k6].color = f.cab.sc[k6].mat === 'glass' ? '#8ecae6' : hexShade(st.cabinet, 0.96);
+      });
+      (f.cab.parts || []).forEach(function (p, pi) { if (p.color) p.color = hexShade(st.cabinet, 1.1); });
+      (f.cab.items || []).forEach(function (it, ii) { it.color = st.accents[(f.id + ii) % st.accents.length]; });
+    }
+    (f.hang || []).forEach(function (g, gi) {   // 掛件：廚具金屬、衣物點綴色
+      g.color = (g.k === 'utensil' || g.k === 'pot') ? st.appliance : st.accents[(f.id + gi) % st.accents.length];
+    });
+  });
+  applyTheme(st.floor);   // 地板＝風格地板色（沿用主題自訂色路徑，格線對比自動）
+  curColor = st.primary;
+  $('fColor').value = st.primary; $('fColorHex').textContent = st.primary;
+  refreshAll();
+  showHint('已套用風格「' + st.name + '」：所有物件/櫃體/放置物品/掛件/地板顏色已覆蓋（可 Ctrl+Z 復原）');
+}
+(function buildStyleSelect() {
+  var s = $('styleSel');
+  var op0 = document.createElement('option');
+  op0.value = ''; op0.textContent = '🎨 風格…';
+  s.appendChild(op0);
+  STYLES.forEach(function (st) {
+    var op = document.createElement('option');
+    op.value = st.k; op.textContent = st.name;
+    s.appendChild(op);
+  });
+  s.addEventListener('change', function () { if (this.value) applyStyle(this.value); });
+})();
 
 /* ============ toggles ============ */
 $('btnGrid').addEventListener('click', function () {
@@ -5928,6 +6041,43 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   delFurniture(o103.id); delFurniture(w103.id);
   ck('警示原因常駐條(重疊對象/超高/覆蓋牆/自動隱藏)', show103 && ceil103 && hide103 && wall103 && off103,
      '(重疊=' + show103 + ', 超高=' + ceil103 + ', 合法隱=' + hide103 + ', 牆=' + wall103 + ', 取消隱=' + off103 + ')');
+  // 104. 風格系統：≥30 風格、語意角色換色（櫃/木/布/家電/尺寸分級/櫃內物品/掛件/地板）、全面覆蓋、可再切換
+  var stCnt = STYLES.length >= 30 && $('styleSel').options.length === STYLES.length + 1;
+  var sc4 = addFurniture({ name: '風格櫃', w: 80, d: 40, h: 100, x: 200, y: 640, rot: 0, color: '#111111' });
+  setSel(sc4.id); refreshAll(); openCab(sc4);
+  cabSelCell = { xi: 0, zi: 0 };
+  $('cabAddKind').value = ''; $('ciAddW').value = 20; $('ciAddD').value = 20; $('ciAddH').value = 20;
+  $('cabAddItem').click();
+  $('cabClose').click();
+  var tb4 = addFurniture({ name: 'T4', w: 40, d: 40, h: 40, x: 272, y: 800, rot: 0, color: '#111111', skin: 'table' });
+  var bd4 = addFurniture({ name: 'B4', w: 40, d: 40, h: 30, x: 300, y: 865, rot: 0, color: '#111111', skin: 'sofa' });
+  var fr4 = addFurniture({ name: 'F4', w: 30, d: 30, h: 60, x: 348, y: 865, rot: 0, color: '#111111', skin: 'fridge' });
+  var big4 = addFurniture({ name: 'BIG4', w: 60, d: 60, h: 160, x: 250, y: 620, rot: 0, color: '#111111' });
+  var sm4 = addFurniture({ name: 'SM4', w: 20, d: 20, h: 20, x: 300, y: 920, rot: 0, color: '#111111' });
+  $('fPipe').value = 'L';
+  var pi4 = addBuiltin('pipe', 272, 830);
+  pi4.hang = [{ k: 'shirt', name: '衣服', w: 30, d: 3, h: 42, color: '#111111', x: 20 },
+              { k: 'pot', name: '鍋子', w: 26, d: 22, h: 16, color: '#111111', x: 60 }];
+  setSel(null); refreshAll();
+  applyStyle('scandi');
+  var st0 = STYLES[0];
+  var role4 = sc4.color === st0.cabinet && tb4.color === st0.wood && bd4.color === st0.fabric &&
+              fr4.color === st0.appliance && big4.color === st0.primary &&
+              sm4.color === st0.accents[sm4.id % 3] && pi4.color === st0.appliance;
+  var cabIt4 = sc4.cab.items[0].color === st0.accents[sc4.id % 3];
+  var hang4 = pi4.hang[0].color === st0.accents[pi4.id % 3] && pi4.hang[1].color === st0.appliance;
+  var floor4 = $('themeColor').value === st0.floor;   // applyTheme(#hex) 同步 themeColor（fill 會被正規化成 rgb）
+  var stI = null;
+  STYLES.forEach(function (s6) { if (s6.k === 'industrial') stI = s6; });
+  applyStyle('industrial');
+  var swap4 = sc4.color === stI.cabinet && tb4.color === stI.wood &&
+              $('themeColor').value === stI.floor;   // 再切換＝再覆蓋
+  var per4 = furniture.filter(isPerson).every(function (o) { return o.color === '#2f6fd6' || o.color === '#f48fb1'; });
+  [sc4, tb4, bd4, fr4, big4, sm4, pi4].forEach(function (o) { delFurniture(o.id); });
+  applyTheme('dark'); setSel(null);
+  ck('風格系統(≥30/角色換色/櫃內/掛件/地板/再切換/人物不變)', stCnt && role4 && cabIt4 && hang4 && floor4 && swap4 && per4,
+     '(數=' + STYLES.length + ', 角色=' + role4 + ', 櫃內=' + cabIt4 + ', 掛件=' + hang4 + ', 地板=' + floor4 +
+     ', 切換=' + swap4 + ', 人物=' + per4 + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();
