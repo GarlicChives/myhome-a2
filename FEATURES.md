@@ -74,6 +74,16 @@
   **電視 112×7×65＝50 吋壁掛**（tv，外框+螢幕；A2 沙發→主臥隔間牆視距 ~263cm 適配，已依實測放入譁.json
   x496.5/y708/z90/rot90 貼牆）。**鞋子改一雙 24×20×9**（兩隻並排 6 部件）。共 22 種、#builtinSel 25 options。
 
+## 水電配置圖層（MEP／btnMep）
+
+- header「⚡ 水電」（3D 檢視旁）＝**唯讀切換**：2D=#mepLayer2d（svg 最上層、pointer-events none）、
+  3D=#mepHost（world 內地面色塊＋.lbl3d billboard 標籤；display 切換）。不進 furniture、不參與碰撞/存檔。
+- 資料：`tools/extract_mep.py` → `mep_data.json` → build 注入 `__MEP_DATA__`；座標＝平面 cm 與主系統同系。
+  目前 5 項（CAD 可證實）：馬桶排水(糞管)×2（TOIL PCOM006 插入點, rot180）、排水立管×2（TOIL CIRCLE r20）、
+  管道間 55×35（SP-PROJ X 框）。**建商此份 DWG 無插座/開關/弱電/網路/配電箱圖元（已掃全部 34 層＋凍結層＋
+  區塊；巨型匿名區塊=屋頂/全區圖）**——schema 已備 {k,name,x,y,z,rot,r?,w?,d?}，取得水電圖 CAD 即可擴充
+  kind（outlet/switch/net/panel…），前端自動顯示。
+
 ## 風格系統（STYLES／styleSel）
 
 - **32 種內建風格**（北歐/無印/Japandi/侘寂/禪風/奶油/韓系奶茶/現代簡約/黑白極簡/高級灰/工業/Loft/

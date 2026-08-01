@@ -54,9 +54,14 @@ for name, body in re.findall(CLASS_RE, base):
 light_css = "\n  ".join(rules)
 print(f"light overrides: {len(rules)}")
 
+import os
+mep_path = TOOLS + r"\mep_data.json"
+mep = open(mep_path, encoding="utf-8").read() if os.path.exists(mep_path) else "[]"
+
 out = tpl.replace("__LIGHT_CSS__", light_css)
 out = out.replace("__BASE_SVG__", base)
 out = out.replace("__PLAN_DATA__", data)
+out = out.replace("__MEP_DATA__", mep)
 
 OUT = r"D:\Desktop\MyHome\A2戶型居家模擬.html"
 with open(OUT, "w", encoding="utf-8") as f:
