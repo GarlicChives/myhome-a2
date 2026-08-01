@@ -112,6 +112,11 @@
           color: #eee; font-size: 13px; padding: 6px 14px; border-radius: 16px; pointer-events: none;
           opacity: 0; transition: opacity .25s; white-space: nowrap; z-index: 25; max-width: 92%; }
   #hint.show { opacity: 1; }
+  /* 警示原因常駐條：選取紅色物件時顯示違規原因（不會像 hint 淡出） */
+  #badInfo { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 46; display: none;
+             background: rgba(183,28,28,.94); color: #fff; padding: 6px 14px; border-radius: 7px;
+             font-size: 12.5px; line-height: 1.55; max-width: 72%; box-shadow: 0 2px 10px rgba(0,0,0,.5);
+             white-space: pre-line; }
   #selftestBadge { position: absolute; top: 40px; left: 10px; z-index: 40; background: rgba(0,0,0,.85); color: #0f0;
           font: 12px/1.5 monospace; padding: 8px 10px; border-radius: 6px; display: none; white-space: pre; }
 
@@ -422,6 +427,7 @@
       <button id="btnMUndo">復原上一筆</button>
       <button id="btnMClear">全部清除</button>
     </div>
+    <div id="badInfo"></div>
     <div id="hint"></div>
     <div id="selftestBadge"></div>
   </div>
@@ -1121,6 +1127,20 @@ function cabItemBad(f, it) {   // 超出內徑或與隔板重疊 → 放不下
 }
 function overCeil(f) { return f.z + f.h > CEIL + 0.01; }
 function isBad(f) { return collidesWalls(f) || !!collidesFurn(f) || overCeil(f); }
+// 紅色警示原因清單（選取警示物件時常駐顯示於 #badInfo）
+function badReason(f) {
+  var out = [];
+  if (collidesWalls(f)) out.push('覆蓋牆面（牆為障礙物，禁止重疊）');
+  furniture.forEach(function (o) {
+    if (o.id === f.id) return;
+    var zOv = (f.z < o.z + o.h - 0.5) && (o.z < f.z + f.h - 0.5);
+    if (zOv && obbOverlap(f, o))
+      out.push('與「' + (o.name || '物件') + '」重疊（高度 ' + r1(Math.max(f.z, o.z)) + '~' +
+               r1(Math.min(f.z + f.h, o.z + o.h)) + ' cm 區間）');
+  });
+  if (overCeil(f)) out.push('超過天花板 ' + CEIL + ' cm（此物頂端 ' + r1(f.z + f.h) + '）');
+  return out;
+}
 function aabbOf(f) {
   var a = f.rot * Math.PI / 180;
   var ex = Math.abs(Math.cos(a)) * f.w / 2 + Math.abs(Math.sin(a)) * f.d / 2;
@@ -1811,6 +1831,12 @@ function syncPanel() {
     if (document.activeElement !== $('fPipeT')) $('fPipeT').value = f.pipeT || PIPE_T;
   }
   updateSelBar();
+  // 警示原因常駐條：單選且為紅色警示物件時顯示原因（取消選取/恢復合法即消失）
+  var bi5 = $('badInfo');
+  if (f && selIds.length === 1 && isBad(f)) {
+    bi5.textContent = '⚠ ' + (f.name || '物件') + ' 警示原因：\n' + badReason(f).join('\n');
+    bi5.style.display = 'block';
+  } else bi5.style.display = 'none';
 }
 function renderList() {
   var box = $('furnList');
@@ -5918,6 +5944,23 @@ tutModal.addEventListener('click', function (e) { if (e.target === tutModal) clo
   $('cabClose').click(); delFurniture(s102.id); setSel(null);
   ck('放置格內徑標示(扣板厚76/47/38)', lbl102,
      '(' + ((txt102.match(/內徑[寬高深] [\d.]+/g) || []).join(', ') || '無標示') + ')');
+  // 103. 警示原因常駐條：選取紅色物件顯示原因（重疊對象/超高/覆蓋牆），恢復合法或取消選取即隱藏
+  var w103 = addFurniture({ name: '主物', w: 60, d: 60, h: 60, x: 272, y: 800, rot: 0, color: '#607d8b' });
+  var o103 = addFurniture({ name: '被撞物', w: 40, d: 40, h: 40, x: 300, y: 865, rot: 0, color: '#8d6e63' });
+  o103.x = w103.x; o103.y = w103.y;                          // 直接位移製造重疊
+  setSel(o103.id); refreshAll();
+  var show103 = $('badInfo').style.display === 'block' && $('badInfo').textContent.indexOf('與「主物」重疊') !== -1;
+  o103.x = 300; o103.y = 865; o103.h = 300; refreshAll();    // 超過天花板（空曠處）
+  var ceil103 = $('badInfo').textContent.indexOf('超過天花板') !== -1;
+  o103.h = 40; refreshAll();
+  var hide103 = $('badInfo').style.display === 'none';       // 恢復合法即隱藏
+  o103.x = 130; refreshAll();                                // 壓左牆（牆面 x=130）
+  var wall103 = $('badInfo').textContent.indexOf('覆蓋牆面') !== -1;
+  setSel(null); refreshAll();
+  var off103 = $('badInfo').style.display === 'none';        // 取消選取即隱藏
+  delFurniture(o103.id); delFurniture(w103.id);
+  ck('警示原因常駐條(重疊對象/超高/覆蓋牆/自動隱藏)', show103 && ceil103 && hide103 && wall103 && off103,
+     '(重疊=' + show103 + ', 超高=' + ceil103 + ', 合法隱=' + hide103 + ', 牆=' + wall103 + ', 取消隱=' + off103 + ')');
   $('builtinSel').value = 'custom'; $('builtinSel').dispatchEvent(new Event('change'));   // 面板回到預設選項
   $('fName').value = '沙發'; $('fNote').value = '';
   redrawMeasures(); refreshAll();
